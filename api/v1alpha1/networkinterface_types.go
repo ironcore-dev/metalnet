@@ -38,7 +38,7 @@ type NetworkInterfaceSpec struct {
 	// Loadbalancer Targets are the provided Prefix
 	LoadBalancerTargets []IPPrefix `json:"loadBalancerTargets,omitempty"`
 	// NATInfo is detailed information about the NAT on this interface
-	NAT NATDetails `json:"nat,omitempty"`
+	NAT *NATDetails `json:"nat,omitempty"`
 	// NodeName is the name of the node on which the interface should be created.
 	NodeName *string `json:"nodeName,omitempty"`
 }

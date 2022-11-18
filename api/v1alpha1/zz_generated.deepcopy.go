@@ -295,7 +295,11 @@ func (in *NetworkInterfaceSpec) DeepCopyInto(out *NetworkInterfaceSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.NAT.DeepCopyInto(&out.NAT)
+	if in.NAT != nil {
+		in, out := &in.NAT, &out.NAT
+		*out = new(NATDetails)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.NodeName != nil {
 		in, out := &in.NodeName, &out.NodeName
 		*out = new(string)
