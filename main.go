@@ -47,6 +47,7 @@ import (
 	mb "github.com/onmetal/metalbond"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -160,6 +161,8 @@ func main() {
 	}()
 
 	dpdkProtoClient := dpdkproto.NewDPDKonmetalClient(conn)
+	routeCache := metalbond.NewRouteCache()
+	lbServerMap := make(map[uint32]types.UID)
 	dpdkClient := dpdk.NewClient(dpdkProtoClient)
 
 	var mbClient dpdkmetalbond.LBServerAccess
@@ -167,9 +170,13 @@ func main() {
 		KeepaliveInterval: 3,
 	}
 
-	mbClient, err = dpdkmetalbond.NewClient(dpdkClient, dpdkmetalbond.ClientOptions{
-		IPv4Only: true,
-	})
+	mbClient, err = dpdkmetalbond.NewClient(
+		dpdkClient,
+		dpdkmetalbond.ClientOptions{
+			IPv4Only: true,
+		},
+		&routeCache,
+		lbServerMap)
 	if err != nil {
 		setupLog.Error(err, "unable to initialize metalbond client")
 		os.Exit(1)
@@ -227,6 +234,8 @@ func main() {
 		SysFS:         sysFS,
 		NodeName:      nodeName,
 		PublicVNI:     publicVNI,
+		RouteCache:    &routeCache,
+		LBServerMap:   lbServerMap,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkInterface")
 		os.Exit(1)

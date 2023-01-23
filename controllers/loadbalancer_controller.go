@@ -95,6 +95,9 @@ func (r *LoadBalancerReconciler) delete(ctx context.Context, log logr.Logger, lb
 
 	log.V(1).Info("Getting dpdk loadbalancer")
 	dpdkLoadBalancer, err := r.DPDK.GetLoadBalancer(ctx, lb.UID)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error getting dpdk loadbalancer: %w", err)
+	}
 
 	vni := dpdkLoadBalancer.Spec.VNI
 	underlayRoute := dpdkLoadBalancer.Status.UnderlayRoute

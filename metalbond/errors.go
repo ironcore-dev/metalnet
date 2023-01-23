@@ -61,6 +61,13 @@ func IgnoreNextHopAlreadyExistsError(err error) error {
 	return err
 }
 
+func IsVNINotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "VNI does not exist")
+}
+
 func IsNextHopNotFoundError(err error) bool {
 	if err == nil {
 		return false
@@ -68,8 +75,15 @@ func IsNextHopNotFoundError(err error) bool {
 	return strings.Contains(err.Error(), "Nexthop does not exist")
 }
 
+func IsDestinationNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "Destination does not exist")
+}
+
 func IgnoreNextHopNotFoundError(err error) error {
-	if IsNextHopNotFoundError(err) {
+	if IsNextHopNotFoundError(err) || IsVNINotFoundError(err) || IsDestinationNotFoundError(err) {
 		return nil
 	}
 	return err

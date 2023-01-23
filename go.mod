@@ -6,11 +6,12 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/jaypipes/ghw v0.9.0
 	github.com/onmetal/controller-utils v0.6.3
-	github.com/onmetal/metalbond v0.3.0
+	github.com/onmetal/metalbond v0.3.1-0.20230201091958-f31c20eca4b7
 	github.com/onmetal/net-dpservice-go v0.1.8
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
+	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
 	google.golang.org/grpc v1.49.0
 	k8s.io/api v0.24.3
@@ -68,9 +69,8 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/vishvananda/netlink v1.1.0 // indirect
-	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
+	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect

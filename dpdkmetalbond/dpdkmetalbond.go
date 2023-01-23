@@ -21,7 +21,9 @@ import (
 	mb "github.com/onmetal/metalbond"
 	mbproto "github.com/onmetal/metalbond/pb"
 	"github.com/onmetal/metalnet/dpdk"
+	"github.com/onmetal/metalnet/metalbond"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -36,17 +38,21 @@ type Client struct {
 	dpdk        dpdk.Client
 	config      ClientOptions
 	lbServerMap map[uint32]types.UID
+	routeCache  *metalbond.RouteCache
+	log         *logrus.Entry
 }
 
 type ClientOptions struct {
 	IPv4Only bool
 }
 
-func NewClient(dpdk dpdk.Client, opts ClientOptions) (*Client, error) {
+func NewClient(dpdk dpdk.Client, opts ClientOptions, cache *metalbond.RouteCache, lbServerMap map[uint32]types.UID) (*Client, error) {
 	return &Client{
 		dpdk:        dpdk,
 		config:      opts,
-		lbServerMap: make(map[uint32]types.UID),
+		lbServerMap: lbServerMap,
+		routeCache:  cache,
+		log:         logrus.WithFields(nil),
 	}, nil
 }
 
@@ -61,12 +67,21 @@ func (c *Client) RemoveLoadBalancerServer(vni uint32, uid types.UID) error {
 }
 
 func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
-	ctx := context.TODO()
+	ctx := context.Background()
 
 	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
 		// log.Infof("Received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
 		return fmt.Errorf("received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
 	}
+
+	defer func() {
+		c.log.Infof("adding vni %d route for %s via %s to cache", uint32(vni), dest, hop)
+		err := c.routeCache.AddNextHop(vni, dest, hop)
+		if err != nil {
+			c.log.Error(err, "error adding route to cache")
+		}
+	}()
+
 	if hop.Type == mbproto.NextHopType_LOADBALANCER_TARGET {
 		_, ok := c.lbServerMap[uint32(vni)]
 		if !ok {
@@ -112,7 +127,7 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	prefix.IpVersion = dpdkproto.IPVersion_IPv4 //only ipv4 in overlay is supported so far
 	prefix.Address = []byte(dest.Prefix.Addr().String())
 
-	if _, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
+	_, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
 		RouteMetadata: dpdk.RouteMetadata{
 			VNI: uint32(vni),
 		},
@@ -123,19 +138,32 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 				Address: hop.TargetAddress,
 			},
 		},
-	}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
+	})
+
+	if dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil || dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_NO_VNI) != nil {
 		return fmt.Errorf("error creating route: %w", err)
 	}
 	return nil
 }
 
 func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
-	ctx := context.TODO()
+	ctx := context.Background()
 
 	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
 		// log.Infof("Received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
 		return fmt.Errorf("received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
 	}
+
+	defer func() {
+		if c.routeCache.NextHopExists(vni, dest, hop) {
+			c.log.Infof("removing vni %d route for %s via %s from cache", uint32(vni), dest, hop)
+			err := c.routeCache.RemoveNextHop(vni, dest, hop)
+			if err != nil {
+				c.log.Error(err, "error removing route from cache")
+			}
+		}
+	}()
+
 	if hop.Type == mbproto.NextHopType_LOADBALANCER_TARGET {
 		_, ok := c.lbServerMap[uint32(vni)]
 		if !ok {

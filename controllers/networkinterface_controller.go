@@ -29,6 +29,7 @@ import (
 	"github.com/jaypipes/ghw"
 	"github.com/onmetal/controller-utils/clientutils"
 	"github.com/onmetal/controller-utils/set"
+	mb "github.com/onmetal/metalbond"
 	"github.com/onmetal/metalbond/pb"
 	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
 	metalnetclient "github.com/onmetal/metalnet/client"
@@ -36,6 +37,7 @@ import (
 	"github.com/onmetal/metalnet/metalbond"
 	"github.com/onmetal/metalnet/netfns"
 	"github.com/onmetal/metalnet/sysfs"
+	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -111,8 +113,10 @@ type NetworkInterfaceReconciler struct {
 	NetFnsManager *netfns.Manager
 	SysFS         sysfs.FS
 
-	NodeName  string
-	PublicVNI int
+	NodeName    string
+	PublicVNI   int
+	RouteCache  *metalbond.RouteCache
+	LBServerMap map[uint32]types.UID
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
@@ -610,6 +614,83 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	}
 	log.V(1).Info("Applied interface", "PCIAddress", pciAddr, "UnderlayRoute", underlayRoute)
 
+	for dest, hops := range r.RouteCache.GetDestinationsByVNI(metalbond.VNI(vni)) {
+		if dest.IPVersion != mb.IPV4 {
+			log.V(1).Info("Received non-IPv4 route will not be applied (IPv4-only mode)")
+			continue
+		}
+
+		for _, hop := range hops {
+			if hop.Type == pb.NextHopType_LOADBALANCER_TARGET {
+				_, ok := r.LBServerMap[vni]
+				if !ok {
+					log.V(1).Error(err, fmt.Sprintf("no registered LoadBalancer on this client for vni %d", vni))
+					continue
+				}
+
+				log.V(1).Info(fmt.Sprintf("adding vni %d lb target route from cache for %s via %s", vni, dest, hop))
+				if _, err := r.DPDK.CreateLBTargetIP(ctx, &dpdk.LBTargetIP{
+					LBTargetIPMetadata: dpdk.LBTargetIPMetadata{
+						UID: r.LBServerMap[vni],
+					},
+					Spec: dpdk.LBTargetIPSpec{
+						Address: hop.TargetAddress,
+					},
+				}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
+					log.V(1).Error(err, "error creating lb route from cache")
+					continue
+				}
+			}
+
+			if hop.Type == pb.NextHopType_NAT {
+				log.V(1).Info(fmt.Sprintf("adding vni %d nat route from cache for %s via %s", vni, dest, hop))
+				if _, err := r.DPDK.CreateNATRoute(ctx, &dpdk.NATRoute{
+					NATRouteMetadata: dpdk.NATRouteMetadata{
+						VNI: vni,
+					},
+					Spec: dpdk.NATRouteSpec{
+						Prefix: dest.Prefix,
+						NextHop: dpdk.NATRouteNextHop{
+							VNI:     vni,
+							Address: hop.TargetAddress,
+							MinPort: hop.NATPortRangeFrom,
+							MaxPort: hop.NATPortRangeTo,
+						},
+					},
+				}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_NEIGHNAT_EXIST) != nil {
+					log.V(1).Error(err, "error nat route from cache")
+					continue
+				}
+			}
+
+			if hop.Type == pb.NextHopType_STANDARD {
+				prefix := &dpdkproto.Prefix{
+					PrefixLength: uint32(dest.Prefix.Bits()),
+				}
+
+				prefix.IpVersion = dpdkproto.IPVersion_IPv4 //only ipv4 in overlay is supported so far
+				prefix.Address = []byte(dest.Prefix.Addr().String())
+
+				log.V(1).Info(fmt.Sprintf("adding vni %d route from cache for %s via %s", vni, dest, hop))
+				if _, err := r.DPDK.CreateRoute(ctx, &dpdk.Route{
+					RouteMetadata: dpdk.RouteMetadata{
+						VNI: vni,
+					},
+					Spec: dpdk.RouteSpec{
+						Prefix: dest.Prefix,
+						NextHop: dpdk.RouteNextHop{
+							VNI:     vni,
+							Address: hop.TargetAddress,
+						},
+					},
+				}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
+					log.V(1).Error(err, "error applying route from cache")
+					continue
+				}
+			}
+		}
+	}
+
 	var errs []error
 
 	log.V(1).Info("Reconciling virtual ip")
@@ -857,10 +938,6 @@ func (r *NetworkInterfaceReconciler) reconcileLBTargets(ctx context.Context, log
 				if err != nil {
 					return err
 				}
-				log.V(1).Info("Ensuring metalbond lb target route exists")
-				if err := r.removeLBTargetRouteIfExists(ctx, vni, prefix, underlayRoute); err != nil {
-					return err
-				}
 				if err := r.addLBTargetRouteIfNotExists(ctx, vni, prefix, underlayRoute); err != nil {
 					return err
 				}
@@ -886,6 +963,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 			return nil, netip.Addr{}, fmt.Errorf("error getting dpdk interface: %w", err)
 		}
 
+		log.V(1).Info("DPDK getting interface", "error", err)
 		log.V(1).Info("DPDK interface does not yet exist, creating it")
 
 		log.V(1).Info("Getting or claiming pci address")

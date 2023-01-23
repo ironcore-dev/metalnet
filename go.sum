@@ -417,8 +417,8 @@ github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/onmetal/controller-utils v0.6.3 h1:VRZt9ubnbnF/v7ADP+3uOKqaR8LRLFdKtn76hQ8mTRs=
 github.com/onmetal/controller-utils v0.6.3/go.mod h1:U5AzcYhIjRIcMMFkYaoLGQRt5CDwF/FQcD91a9nGsYE=
-github.com/onmetal/metalbond v0.3.0 h1:ABmQyK9whCxkRYDXwXDuP+bezw0VMEuindHc4DHtxxY=
-github.com/onmetal/metalbond v0.3.0/go.mod h1:q2YETeAlmL2PutUd0pMuw0gb7iJ1bPNRIQwd8QuBNIs=
+github.com/onmetal/metalbond v0.3.1-0.20230201091958-f31c20eca4b7 h1:oQ/9wxPUY/QZnAPv+DvKD4vHqEIE/Z6S2Luz2cjsDfQ=
+github.com/onmetal/metalbond v0.3.1-0.20230201091958-f31c20eca4b7/go.mod h1:mvYp6CeCiNV1gzw49iKvgNtHL403E2INJ0YBgXcE1b0=
 github.com/onmetal/net-dpservice-go v0.1.8 h1:ofZLUgzCUuMlTUPhnjXWp0RTQJYmE/h7vKadAYb3zAY=
 github.com/onmetal/net-dpservice-go v0.1.8/go.mod h1:xclo8jzH6XJsWuz1WB/ivgSYLii5PqufJQ3jr77SD5k=
 github.com/onsi/ginkgo v0.0.0-20170829012221-11459a886d9c/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
@@ -521,8 +521,9 @@ github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PK
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
-github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae h1:4hwBBUfQCFe3Cym0ZtKyq7L16eZUtYKs+BaHDN6mAns=
 github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
+github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 h1:gga7acRE695APm9hlsSMoOoE65U4/TcqNj90mc69Rlg=
+github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
