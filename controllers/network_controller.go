@@ -25,9 +25,11 @@ import (
 	"github.com/onmetal/controller-utils/clientutils"
 	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
 	"github.com/onmetal/metalnet/dpdk"
+	"github.com/onmetal/metalnet/dpdkmetalbond"
 	"github.com/onmetal/metalnet/metalbond"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,9 +49,9 @@ type NetworkReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	DPDK      dpdk.Client
-	Metalbond metalbond.Client
-
+	DPDK          dpdk.Client
+	Metalbond     metalbond.Client
+	MBInternal    dpdkmetalbond.MbInternalAccess
 	RouterAddress netip.Addr
 }
 
@@ -137,11 +139,11 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 	}
 	log.V(1).Info("Created dpdk default route if not existed")
 
-	log.V(1).Info("Subscribing to metalbond if not subscribed")
-	if err := r.subscribeIfNotSubscribed(ctx, vni); err != nil {
+	log.V(1).Info("Reconciling peered VNIs")
+	if err := r.reconcilePeeredVNIs(ctx, log, network, vni); err != nil {
 		return ctrl.Result{}, err
 	}
-	log.V(1).Info("Subscribed to metalbond if not subscribed")
+	log.V(1).Info("Reconciled peered VNIs")
 
 	return ctrl.Result{}, nil
 }
@@ -186,6 +188,53 @@ func (r *NetworkReconciler) subscribeIfNotSubscribed(ctx context.Context, vni ui
 	if err := r.Metalbond.Subscribe(ctx, metalbond.VNI(vni)); metalbond.IgnoreAlreadySubscribedToVNIError(err) != nil {
 		return fmt.Errorf("error subscribing to vni: %w", err)
 	}
+	return nil
+}
+
+func (r *NetworkReconciler) setDifference(s1, s2 sets.Set[uint32]) sets.Set[uint32] {
+	diff := sets.New[uint32]()
+	for k := range s1 {
+		if _, ok := s2[k]; !ok {
+			diff.Insert(k)
+		}
+	}
+	return diff
+}
+
+func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32) error {
+	mbPeerVnis, _ := r.MBInternal.GetPeerVnis(vni)
+
+	specPeerVnis := sets.New[uint32]()
+	if network.Spec.PeeredIDs != nil {
+		for _, v := range network.Spec.PeeredIDs {
+			specPeerVnis.Insert(uint32(v))
+		}
+	}
+	missing := r.setDifference(mbPeerVnis, specPeerVnis)
+	added := r.setDifference(specPeerVnis, mbPeerVnis)
+
+	if missing.Len() != 0 || added.Len() != 0 {
+		for _, peeredVNI := range missing.UnsortedList() {
+			if err := r.unsubscribeIfSubscribed(ctx, peeredVNI); err != nil {
+				return err
+			}
+			_ = r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI)
+		}
+
+		for _, peeredVNI := range added.UnsortedList() {
+			if err := r.subscribeIfNotSubscribed(ctx, peeredVNI); err != nil {
+				return err
+			}
+			_ = r.MBInternal.AddVniToPeerVnis(vni, peeredVNI)
+		}
+	}
+
+	log.V(1).Info("Subscribing to metalbond if not subscribed")
+	if err := r.subscribeIfNotSubscribed(ctx, vni); err != nil {
+		return err
+	}
+	log.V(1).Info("Subscribed to metalbond if not subscribed")
+
 	return nil
 }
 

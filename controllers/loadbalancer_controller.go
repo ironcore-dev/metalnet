@@ -47,11 +47,11 @@ type LoadBalancerReconciler struct {
 	record.EventRecorder
 	Scheme *runtime.Scheme
 
-	DPDK      dpdk.Client
-	LBServer  dpdkmetalbond.LBServerAccess
-	Metalbond metalbond.Client
-	NodeName  string
-	PublicVNI int
+	DPDK       dpdk.Client
+	MBInternal dpdkmetalbond.MbInternalAccess
+	Metalbond  metalbond.Client
+	NodeName   string
+	PublicVNI  int
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=loadbalancers,verbs=get;list;watch;create;update;patch;delete
@@ -119,7 +119,7 @@ func (r *LoadBalancerReconciler) delete(ctx context.Context, log logr.Logger, lb
 		}
 
 		log.V(1).Info("Remove LoadBalancer server", "vni", vni, "ip", ip)
-		if err := r.LBServer.RemoveLoadBalancerServer(vni, ip, lb.UID); err != nil {
+		if err := r.MBInternal.RemoveLoadBalancerServer(vni, ip, lb.UID); err != nil {
 			return ctrl.Result{}, fmt.Errorf("error deleting dpdk loadbalancer from internal cache: %w", err)
 		}
 
@@ -144,7 +144,7 @@ func (r *LoadBalancerReconciler) delete(ctx context.Context, log logr.Logger, lb
 	}
 	log.V(1).Info("Deleted Loadbalancer")
 	log.V(1).Info("Remove LoadBalancer server", "vni", vni, "ip", ip)
-	if err := r.LBServer.RemoveLoadBalancerServer(vni, ip, lb.UID); err != nil {
+	if err := r.MBInternal.RemoveLoadBalancerServer(vni, ip, lb.UID); err != nil {
 		return ctrl.Result{}, fmt.Errorf("error deleting dpdk loadbalancer from internal cache: %w", err)
 	}
 
@@ -336,7 +336,7 @@ func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr
 			return netip.Addr{}, fmt.Errorf("error creating dpdk loadbalancer: %w", err)
 		}
 		log.V(1).Info("Adding loadbalancer server", "vni", vni, "ip", ip)
-		if err := r.LBServer.AddLoadBalancerServer(vni, ip, lb.UID); err != nil {
+		if err := r.MBInternal.AddLoadBalancerServer(vni, ip, lb.UID); err != nil {
 			return netip.Addr{}, fmt.Errorf("error adding dpdk loadbalancer to internal cache: %w", err)
 		}
 		log.V(1).Info("Adding loadbalancer route if not exists")
@@ -349,7 +349,7 @@ func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr
 
 	log.V(1).Info("DPDK loadbalancer exists")
 	log.V(1).Info("Adding loadbalancer server", "vni", vni, "ip", ip)
-	if err := r.LBServer.AddLoadBalancerServer(vni, ip, lb.UID); err != nil {
+	if err := r.MBInternal.AddLoadBalancerServer(vni, ip, lb.UID); err != nil {
 		return netip.Addr{}, fmt.Errorf("error adding dpdk loadbalancer to internal cache: %w", err)
 	}
 	log.V(1).Info("Adding loadbalancer route if not exists")

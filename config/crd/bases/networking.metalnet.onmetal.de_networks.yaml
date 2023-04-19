@@ -51,6 +51,12 @@ spec:
                 maximum: 16777215
                 minimum: 1
                 type: integer
+              peeredIDs:
+                description: PeeredIDs are the IDs of networks to peer with.
+                items:
+                  format: int32
+                  type: integer
+                type: array
             required:
             - id
             type: object
