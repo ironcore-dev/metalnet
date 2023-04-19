@@ -29,6 +29,9 @@ type NetworkSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// ID is the unique identifier of the Network
 	ID int32 `json:"id"`
+
+	// PeeredIDs are the IDs of networks to peer with.
+	PeeredIDs []int32 `json:"peeredIDs,omitempty"`
 }
 
 //+kubebuilder:object:root=true

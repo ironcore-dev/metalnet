@@ -23,19 +23,23 @@ import (
 	"github.com/onmetal/metalnet/dpdk"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-type LBServerAccess interface {
+type MbInternalAccess interface {
 	AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	AddLoadBalancerServer(vni uint32, uid types.UID) error
 	RemoveLoadBalancerServer(vni uint32, uid types.UID) error
+	AddPeerVnis(vni uint32, peeredVnis sets.Set[uint32]) error
+	GetPeerVnis(vni uint32) (sets.Set[uint32], error)
 }
 
 type Client struct {
 	dpdk        dpdk.Client
 	config      ClientOptions
 	lbServerMap map[uint32]types.UID
+	vniMap      map[uint32]sets.Set[uint32]
 }
 
 type ClientOptions struct {
@@ -47,7 +51,23 @@ func NewClient(dpdk dpdk.Client, opts ClientOptions) (*Client, error) {
 		dpdk:        dpdk,
 		config:      opts,
 		lbServerMap: make(map[uint32]types.UID),
+		vniMap:      make(map[uint32]sets.Set[uint32]),
 	}, nil
+}
+
+func (c *Client) AddPeerVnis(vni uint32, peeredVnis sets.Set[uint32]) error {
+	c.vniMap[vni] = peeredVnis
+	return nil
+}
+
+func (c *Client) GetPeerVnis(vni uint32) (sets.Set[uint32], error) {
+	vnis, ok := c.vniMap[vni]
+
+	if !ok {
+		return sets.New[uint32](), nil
+	}
+
+	return vnis, nil
 }
 
 func (c *Client) AddLoadBalancerServer(vni uint32, uid types.UID) error {
