@@ -224,17 +224,15 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, network *me
 			if err := r.unsubscribeIfSubscribed(ctx, peeredVNI); err != nil {
 				return err
 			}
+			_ = r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI)
 		}
 
 		for _, peeredVNI := range added.UnsortedList() {
 			if err := r.subscribeIfNotSubscribed(ctx, peeredVNI); err != nil {
 				return err
 			}
+			_ = r.MBInternal.AddVniToPeerVnis(vni, peeredVNI)
 		}
-	}
-
-	if err := r.MBInternal.AddPeerVnis(vni, specPeerVnis); err != nil {
-		return err
 	}
 
 	return nil

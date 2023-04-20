@@ -33,6 +33,8 @@ type MbInternalAccess interface {
 	RemoveLoadBalancerServer(vni uint32, uid types.UID) error
 	AddPeerVnis(vni uint32, peeredVnis sets.Set[uint32]) error
 	GetPeerVnis(vni uint32) (sets.Set[uint32], error)
+	AddVniToPeerVnis(vni, value uint32) error
+	RemoveVniFromPeerVnis(vni, value uint32) error
 }
 
 type Client struct {
@@ -40,18 +42,20 @@ type Client struct {
 	config      ClientOptions
 	lbServerMap map[uint32]types.UID
 	vniMap      map[uint32]sets.Set[uint32]
+	vniRouteMap map[uint32]*dpdk.RouteSpecSet
 }
 
 type ClientOptions struct {
 	IPv4Only bool
 }
 
-func NewClient(dpdk dpdk.Client, opts ClientOptions) (*Client, error) {
+func NewClient(dpdkClient dpdk.Client, opts ClientOptions) (*Client, error) {
 	return &Client{
-		dpdk:        dpdk,
+		dpdk:        dpdkClient,
 		config:      opts,
 		lbServerMap: make(map[uint32]types.UID),
 		vniMap:      make(map[uint32]sets.Set[uint32]),
+		vniRouteMap: make(map[uint32]*dpdk.RouteSpecSet),
 	}, nil
 }
 
@@ -68,6 +72,26 @@ func (c *Client) GetPeerVnis(vni uint32) (sets.Set[uint32], error) {
 	}
 
 	return vnis, nil
+}
+
+func (c *Client) AddVniToPeerVnis(vni, value uint32) error {
+	set, ok := c.vniMap[vni]
+	if !ok {
+		set = sets.New[uint32]()
+		c.vniMap[vni] = set
+		c.vniRouteMap[vni] = dpdk.NewRouteSpecSet()
+	}
+	set.Insert(value)
+	return nil
+}
+
+func (c *Client) RemoveVniFromPeerVnis(vni, value uint32) error {
+	set, ok := c.vniMap[vni]
+	if !ok {
+		return nil
+	}
+	set.Delete(value)
+	return nil
 }
 
 func (c *Client) AddLoadBalancerServer(vni uint32, uid types.UID) error {
@@ -146,6 +170,13 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
 		return fmt.Errorf("error creating route: %w", err)
 	}
+	_ = c.vniRouteMap[uint32(vni)].Insert(dpdk.RouteSpec{
+		Prefix: dest.Prefix,
+		NextHop: dpdk.RouteNextHop{
+			VNI:     uint32(vni),
+			Address: hop.TargetAddress,
+		},
+	})
 	return nil
 }
 
