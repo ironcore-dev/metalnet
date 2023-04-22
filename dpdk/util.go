@@ -17,13 +17,20 @@ package dpdk
 import (
 	"encoding/json"
 	"fmt"
+
+	mb "github.com/onmetal/metalbond"
 )
 
-type RouteSpecSet struct {
+type MBRouteSet struct {
 	set map[string]struct{}
 }
 
-func RouteSpecToString(c RouteSpec) (string, error) {
+type MBRoute struct {
+	Dest    mb.Destination
+	NextHop mb.NextHop
+}
+
+func MBRouteToString(c MBRoute) (string, error) {
 	bytes, err := json.Marshal(c)
 	if err != nil {
 		return "", fmt.Errorf("failed to convert custom type to string: %v", err)
@@ -31,21 +38,21 @@ func RouteSpecToString(c RouteSpec) (string, error) {
 	return string(bytes), nil
 }
 
-func stringToRouteSpec(s string) (RouteSpec, error) {
-	var c RouteSpec
+func stringToMBRoute(s string) (MBRoute, error) {
+	var c MBRoute
 	err := json.Unmarshal([]byte(s), &c)
 	if err != nil {
-		return RouteSpec{}, fmt.Errorf("failed to convert string to custom type: %v", err)
+		return MBRoute{}, fmt.Errorf("failed to convert string to custom type: %v", err)
 	}
 	return c, nil
 }
 
-func NewRouteSpecSet() *RouteSpecSet {
-	return &RouteSpecSet{set: make(map[string]struct{})}
+func NewMBRouteSet() *MBRouteSet {
+	return &MBRouteSet{set: make(map[string]struct{})}
 }
 
-func (cts *RouteSpecSet) Insert(c RouteSpec) error {
-	s, err := RouteSpecToString(c)
+func (cts *MBRouteSet) Insert(c MBRoute) error {
+	s, err := MBRouteToString(c)
 	if err != nil {
 		return err
 	}
@@ -53,8 +60,8 @@ func (cts *RouteSpecSet) Insert(c RouteSpec) error {
 	return nil
 }
 
-func (cts *RouteSpecSet) Delete(c RouteSpec) error {
-	s, err := RouteSpecToString(c)
+func (cts *MBRouteSet) Delete(c MBRoute) error {
+	s, err := MBRouteToString(c)
 	if err != nil {
 		return err
 	}
@@ -62,8 +69,8 @@ func (cts *RouteSpecSet) Delete(c RouteSpec) error {
 	return nil
 }
 
-func (cts *RouteSpecSet) Has(c RouteSpec) (bool, error) {
-	s, err := RouteSpecToString(c)
+func (cts *MBRouteSet) Has(c MBRoute) (bool, error) {
+	s, err := MBRouteToString(c)
 	if err != nil {
 		return false, err
 	}
@@ -71,10 +78,10 @@ func (cts *RouteSpecSet) Has(c RouteSpec) (bool, error) {
 	return exists, nil
 }
 
-func (cts *RouteSpecSet) List() ([]RouteSpec, error) {
-	result := make([]RouteSpec, 0, len(cts.set))
+func (cts *MBRouteSet) List() ([]MBRoute, error) {
+	result := make([]MBRoute, 0, len(cts.set))
 	for s := range cts.set {
-		c, err := stringToRouteSpec(s)
+		c, err := stringToMBRoute(s)
 		if err != nil {
 			return nil, err
 		}

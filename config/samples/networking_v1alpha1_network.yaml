@@ -4,3 +4,6 @@ metadata:
   name: network-sample
 spec:
   id: 123
+  peeredIDs:
+    - 200
+    - 300

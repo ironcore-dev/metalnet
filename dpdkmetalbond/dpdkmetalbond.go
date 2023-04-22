@@ -26,15 +26,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
+const localCall = true
+
 type MbInternalAccess interface {
 	AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	AddLoadBalancerServer(vni uint32, uid types.UID) error
 	RemoveLoadBalancerServer(vni uint32, uid types.UID) error
-	AddPeerVnis(vni uint32, peeredVnis sets.Set[uint32]) error
 	GetPeerVnis(vni uint32) (sets.Set[uint32], error)
-	AddVniToPeerVnis(vni, value uint32) error
-	RemoveVniFromPeerVnis(vni, value uint32) error
+	AddVniToPeerVnis(vni, peeredVNI uint32) error
+	RemoveVniFromPeerVnis(vni, peeredVNI uint32) error
 }
 
 type Client struct {
@@ -42,7 +43,7 @@ type Client struct {
 	config      ClientOptions
 	lbServerMap map[uint32]types.UID
 	vniMap      map[uint32]sets.Set[uint32]
-	vniRouteMap map[uint32]*dpdk.RouteSpecSet
+	vniRouteMap map[uint32]*dpdk.MBRouteSet
 }
 
 type ClientOptions struct {
@@ -55,16 +56,12 @@ func NewClient(dpdkClient dpdk.Client, opts ClientOptions) (*Client, error) {
 		config:      opts,
 		lbServerMap: make(map[uint32]types.UID),
 		vniMap:      make(map[uint32]sets.Set[uint32]),
-		vniRouteMap: make(map[uint32]*dpdk.RouteSpecSet),
+		vniRouteMap: make(map[uint32]*dpdk.MBRouteSet),
 	}, nil
 }
 
-func (c *Client) AddPeerVnis(vni uint32, peeredVnis sets.Set[uint32]) error {
-	c.vniMap[vni] = peeredVnis
-	return nil
-}
-
 func (c *Client) GetPeerVnis(vni uint32) (sets.Set[uint32], error) {
+	fmt.Printf("GetPeerVnis vni:%v\n", vni)
 	vnis, ok := c.vniMap[vni]
 
 	if !ok {
@@ -74,23 +71,32 @@ func (c *Client) GetPeerVnis(vni uint32) (sets.Set[uint32], error) {
 	return vnis, nil
 }
 
-func (c *Client) AddVniToPeerVnis(vni, value uint32) error {
+func (c *Client) AddVniToPeerVnis(vni, peeredVNI uint32) error {
+	fmt.Printf("AddVniToPeerVnis vni:%v peeredVni %v\n", vni, peeredVNI)
 	set, ok := c.vniMap[vni]
 	if !ok {
 		set = sets.New[uint32]()
 		c.vniMap[vni] = set
-		c.vniRouteMap[vni] = dpdk.NewRouteSpecSet()
 	}
-	set.Insert(value)
+	set.Insert(peeredVNI)
+	_, ok = c.vniRouteMap[peeredVNI]
+	if !ok {
+		c.vniRouteMap[peeredVNI] = dpdk.NewMBRouteSet()
+	}
 	return nil
 }
 
-func (c *Client) RemoveVniFromPeerVnis(vni, value uint32) error {
+func (c *Client) RemoveVniFromPeerVnis(vni, peeredVNI uint32) error {
+	fmt.Printf("RemoveVniFromPeerVnis vni:%v peeredVni %v\n", vni, peeredVNI)
 	set, ok := c.vniMap[vni]
 	if !ok {
 		return nil
 	}
-	set.Delete(value)
+	peeredRoutes, _ := c.vniRouteMap[peeredVNI].List()
+	for _, peeredRoute := range peeredRoutes {
+		_ = c.removeLocalRoute(mb.VNI(vni), peeredRoute.Dest, peeredRoute.NextHop, localCall)
+	}
+	set.Delete(peeredVNI)
 	return nil
 }
 
@@ -104,7 +110,28 @@ func (c *Client) RemoveLoadBalancerServer(vni uint32, uid types.UID) error {
 	return nil
 }
 
-func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
+func (c *Client) addToPeeredVniRouteCache(vni uint32, route dpdk.MBRoute) error {
+	fmt.Println("addToPeeredVniRouteCache vni:", vni)
+	peeredVnis, _ := c.GetPeerVnis(vni)
+	for peeredVni := range peeredVnis {
+		fmt.Printf("addToPeeredVniRouteCache vni: %v peeredVNI: %v \n", vni, peeredVni)
+		_ = c.addLocalRoute(mb.VNI(peeredVni), route.Dest, route.NextHop, localCall)
+		_ = c.vniRouteMap[uint32(peeredVni)].Insert(route)
+	}
+	return fmt.Errorf("not a peered VNI %d not caching", vni)
+}
+
+func (c *Client) removeFromPeeredVniRouteCache(vni uint32, route dpdk.MBRoute) error {
+	fmt.Println("removeFromPeeredVniRouteCache vni:", vni)
+	peeredVnis, _ := c.GetPeerVnis(vni)
+	for peeredVni := range peeredVnis {
+		_ = c.removeLocalRoute(mb.VNI(peeredVni), route.Dest, route.NextHop, localCall)
+		_ = c.vniRouteMap[uint32(peeredVni)].Delete(route)
+	}
+	return fmt.Errorf("not a peered VNI %d not caching", vni)
+}
+
+func (c *Client) addLocalRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop, local bool) error {
 	ctx := context.TODO()
 
 	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
@@ -170,17 +197,16 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
 		return fmt.Errorf("error creating route: %w", err)
 	}
-	_ = c.vniRouteMap[uint32(vni)].Insert(dpdk.RouteSpec{
-		Prefix: dest.Prefix,
-		NextHop: dpdk.RouteNextHop{
-			VNI:     uint32(vni),
-			Address: hop.TargetAddress,
-		},
-	})
+	if !local {
+		_ = c.addToPeeredVniRouteCache(uint32(vni), dpdk.MBRoute{
+			Dest:    dest,
+			NextHop: hop,
+		})
+	}
 	return nil
 }
 
-func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
+func (c *Client) removeLocalRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop, local bool) error {
 	ctx := context.TODO()
 
 	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
@@ -239,5 +265,20 @@ func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) er
 	}); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_RT) != nil {
 		return fmt.Errorf("error deleting route: %w", err)
 	}
+
+	if !local {
+		_ = c.removeFromPeeredVniRouteCache(uint32(vni), dpdk.MBRoute{
+			Dest:    dest,
+			NextHop: hop,
+		})
+	}
 	return nil
+}
+
+func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
+	return c.addLocalRoute(vni, dest, hop, !localCall)
+}
+
+func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
+	return c.removeLocalRoute(vni, dest, hop, !localCall)
 }
