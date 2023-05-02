@@ -59,6 +59,8 @@ type Client interface {
 
 	CreateNATRoute(ctx context.Context, route *NATRoute) (*NATRoute, error)
 	DeleteNATRoute(ctx context.Context, route *NATRoute) error
+
+	IsVniAvailableForInterfaces(ctx context.Context, vni uint32) (bool, error)
 }
 
 type NATRoute struct {
@@ -340,6 +342,19 @@ type client struct {
 
 func NewClient(protoClient dpdkproto.DPDKonmetalClient) Client {
 	return &client{protoClient}
+}
+
+func (c *client) IsVniAvailableForInterfaces(ctx context.Context, vni uint32) (bool, error) {
+	res, err := c.DPDKonmetalClient.IsVniInUse(ctx, &dpdkproto.IsVniInUseRequest{
+		Vni:  vni,
+		Type: dpdkproto.VniUsageType_VniIpv4})
+	if err != nil {
+		return false, err
+	}
+	if errorCode := res.GetStatus().GetError(); errorCode != 0 {
+		return false, &StatusError{errorCode: errorCode, message: res.GetStatus().GetMessage()}
+	}
+	return res.InUse, nil
 }
 
 func (c *client) GetInterface(ctx context.Context, uid types.UID) (*Interface, error) {

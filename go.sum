@@ -235,6 +235,8 @@ github.com/onmetal/metalbond v0.3.0 h1:ABmQyK9whCxkRYDXwXDuP+bezw0VMEuindHc4DHtx
 github.com/onmetal/metalbond v0.3.0/go.mod h1:q2YETeAlmL2PutUd0pMuw0gb7iJ1bPNRIQwd8QuBNIs=
 github.com/onmetal/net-dpservice-go v0.1.9 h1:PXJDl5SFe/BnOeDCAnTJJlRTRuj33YgsEkifrHb+0DA=
 github.com/onmetal/net-dpservice-go v0.1.9/go.mod h1:dbItLY1P+nYl7/c04JdJTEaMCG6GLXgAZsMP/OuZBmg=
+github.com/onmetal/net-dpservice-go v0.1.10-0.20230502104739-14ddfb0fd622 h1:tfNT9mb8CqrPApYwSTZkiIqgCRy1gZm8G8eNeS3oiCs=
+github.com/onmetal/net-dpservice-go v0.1.10-0.20230502104739-14ddfb0fd622/go.mod h1:dbItLY1P+nYl7/c04JdJTEaMCG6GLXgAZsMP/OuZBmg=
 github.com/onsi/ginkgo/v2 v2.8.0 h1:pAM+oBNPrpXRs+E/8spkeGx9QgekbRVyr74EUvRVOUI=
 github.com/onsi/ginkgo/v2 v2.8.0/go.mod h1:6JsQiECmxCa3V5st74AL/AmsV482EDdVrGaVW6z3oYU=
 github.com/onsi/gomega v1.26.0 h1:03cDLK28U6hWvCAns6NeydX3zIm4SF3ci69ulidS32Q=
