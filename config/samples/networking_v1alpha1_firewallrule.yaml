@@ -1,0 +1,36 @@
+apiVersion: networking.metalnet.onmetal.de/v1alpha1
+kind: FirewallRule
+metadata:
+  name: firewallrule-sample
+spec:
+  direction: "ingress"
+  action: "accept" #Only accept rules possible at the moment.
+  priority: 1000 # 1000 is default but doesnt have any effect, for potential future use.
+  ipVersion: "IPv4"
+  sourcePrefix: "0.0.0.0/0" #Match all source ips
+  destinationPrefix: "192.168.2.0/24"
+  protocolMatch: # non-existing protocolMatch field would match all protocols
+    protocolType: tcp
+    portRange:
+      srcPortLower: -1    #Match all source ports
+      srcPortUpper: 0     #When lower port is -1, upper one's value will be ignored
+      dstPortLower: 8000
+      dstPortUpper: 8099
+
+
+apiVersion: networking.metalnet.onmetal.de/v1alpha1
+kind: FirewallRule
+metadata:
+  name: firewallrule-sample2
+spec:
+  direction: "egress"
+  action: "accept"
+  priority: 1000 # 1000 is default but doesnt have any effect, for potential future use.
+  ipVersion: "IPv4"
+  sourcePrefix: "0.0.0.0/0" #Match all source ips
+  destinationPrefix: "192.168.2.0/24"
+  protocolMatch: # non-existing protocolMatch field would match all protocols
+    protocolType: icmp
+    icmp:
+      icmpType:  8    #Match type ECHO-REQUEST
+      icmpCode: -1    #Match all codes of the type / Non-existing icmpCode field is equivalent to -1 value

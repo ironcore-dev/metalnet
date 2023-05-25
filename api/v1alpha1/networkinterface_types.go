@@ -41,6 +41,13 @@ type NetworkInterfaceSpec struct {
 	NAT *NATDetails `json:"nat,omitempty"`
 	// NodeName is the name of the node on which the interface should be created.
 	NodeName *string `json:"nodeName,omitempty"`
+
+	// One idea is to use an array FirewallRule references
+	// FirewallRuleRefs are the firewall rules to be applied to this interface.
+	FirewallRuleRefs []corev1.LocalObjectReference `json:"firewalRuleRefs,omitempty"`
+
+	// Another idea is to use a labelselector to collect the corresponding FirewallRules
+	FirewallRuleSelector metav1.LabelSelector `json:"firewallRuleSelector,omitempty"`
 }
 
 // NetworkInterfaceStatus defines the observed state of NetworkInterface
