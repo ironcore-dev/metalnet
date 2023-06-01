@@ -161,7 +161,7 @@ func (r *NetworkInterfaceReconciler) releaseNetFnIfClaimExists(uid types.UID) er
 }
 
 func (r *NetworkInterfaceReconciler) deleteDPDKVirtualIPIfExists(ctx context.Context, nic *metalnetv1alpha1.NetworkInterface) error {
-	if err := r.DPDK.DeleteVirtualIP(ctx, nic.UID); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_NAT) != nil {
+	if err := r.DPDK.DeleteVirtualIP(ctx, nic.UID); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_VIP_NO_VM) != nil {
 		return fmt.Errorf("error deleting dpdk virtual ip: %w", err)
 	}
 	return nil
@@ -288,21 +288,21 @@ func (r *NetworkInterfaceReconciler) removeLBTargetRouteIfExists(ctx context.Con
 }
 
 func (r *NetworkInterfaceReconciler) deleteDPDKLBTargetIfExists(ctx context.Context, nicUID types.UID, prefix netip.Prefix) error {
-	if err := r.DPDK.DeleteLBPrefix(ctx, nicUID, prefix); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_PFX_NO_VM) != nil {
+	if err := r.DPDK.DeleteLBPrefix(ctx, nicUID, prefix); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_PREFIX_NO_VM) != nil {
 		return fmt.Errorf("error deleting lb target: %w", err)
 	}
 	return nil
 }
 
 func (r *NetworkInterfaceReconciler) deleteDPDKPrefixIfExists(ctx context.Context, nicUID types.UID, prefix netip.Prefix) error {
-	if err := r.DPDK.DeletePrefix(ctx, nicUID, prefix); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_PFX_NO_VM) != nil {
+	if err := r.DPDK.DeletePrefix(ctx, nicUID, prefix); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_PREFIX_NO_VM) != nil {
 		return fmt.Errorf("error deleting prefix: %w", err)
 	}
 	return nil
 }
 
 func (r *NetworkInterfaceReconciler) deleteDPDKInterfaceIfExists(ctx context.Context, uid types.UID) error {
-	if err := r.DPDK.DeleteInterface(ctx, uid); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_PFX_NO_VM) != nil {
+	if err := r.DPDK.DeleteInterface(ctx, uid); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_PREFIX_NO_VM) != nil {
 		return fmt.Errorf("error deleting interface: %w", err)
 	}
 	return nil
@@ -324,7 +324,7 @@ func (r *NetworkInterfaceReconciler) applyNATIP(ctx context.Context, log logr.Lo
 	log.V(1).Info("Getting dpdk nat ip")
 	dpdkNAT, err := r.DPDK.GetNATLocal(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NAT, dpdk.GET_NAT_NO_IP_SET) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NATVIP_NO_VM, dpdk.GET_NATVIP_NO_IP_SET) {
 			return fmt.Errorf("error getting dpdk nat ip: %w", err)
 		}
 
@@ -381,7 +381,7 @@ func (r *NetworkInterfaceReconciler) deleteNATIP(ctx context.Context, log logr.L
 	log.V(1).Info("Getting dpdk nat ip if exists")
 	dpdkVIP, err := r.DPDK.GetNATLocal(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NAT, dpdk.GET_NAT_NO_IP_SET) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NATVIP_NO_VM, dpdk.GET_NATVIP_NO_IP_SET) {
 			return fmt.Errorf("error getting dpdk nat ip: %w", err)
 		}
 
@@ -411,7 +411,7 @@ func (r *NetworkInterfaceReconciler) deleteExistingNATIP(ctx context.Context, lo
 }
 
 func (r *NetworkInterfaceReconciler) deleteDPDKNATIPIfExists(ctx context.Context, nic *metalnetv1alpha1.NetworkInterface) error {
-	if err := r.DPDK.DeleteNATLocal(ctx, nic.UID); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_NAT) != nil {
+	if err := r.DPDK.DeleteNATLocal(ctx, nic.UID); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_VIP_NO_VM) != nil {
 		return fmt.Errorf("error deleting dpdk nat ip: %w", err)
 	}
 	return nil
@@ -481,7 +481,7 @@ func (r *NetworkInterfaceReconciler) applyVirtualIP(ctx context.Context, log log
 	log.V(1).Info("Getting dpdk virtual ip")
 	dpdkVIP, err := r.DPDK.GetVirtualIP(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NAT, dpdk.GET_NAT_NO_IP_SET) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NATVIP_NO_VM, dpdk.GET_NATVIP_NO_IP_SET) {
 			return fmt.Errorf("error getting dpdk virtual ip: %w", err)
 		}
 
@@ -535,7 +535,7 @@ func (r *NetworkInterfaceReconciler) deleteVirtualIP(ctx context.Context, log lo
 	log.V(1).Info("Getting dpdk virtual ip if exists")
 	dpdkVIP, err := r.DPDK.GetVirtualIP(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NAT, dpdk.GET_NAT_NO_IP_SET) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_NATVIP_NO_VM, dpdk.GET_NATVIP_NO_IP_SET) {
 			return fmt.Errorf("error getting dpdk virtual ip: %w", err)
 		}
 
@@ -893,7 +893,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 	log.V(1).Info("Getting dpdk interface")
 	iface, err := r.DPDK.GetInterface(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_VM_NOT_FND) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_IFACE_NOT_FOUND) {
 			return nil, netip.Addr{}, fmt.Errorf("error getting dpdk interface: %w", err)
 		}
 
@@ -1016,7 +1016,7 @@ func (r *NetworkInterfaceReconciler) delete(ctx context.Context, log logr.Logger
 	log.V(1).Info("Getting dpdk interface")
 	dpdkIface, err := r.DPDK.GetInterface(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_VM_NOT_FND) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_IFACE_NOT_FOUND) {
 			return ctrl.Result{}, fmt.Errorf("error getting dpdk interface: %w", err)
 		}
 
@@ -1085,7 +1085,7 @@ func (r *NetworkInterfaceReconciler) deleteLBTargets(
 	log.V(1).Info("Listing lb targets")
 	prefixes, err := r.DPDK.ListLBPrefixes(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_VM_NOT_FND) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_IFACE_NOT_FOUND) {
 			return fmt.Errorf("error listing lb targets: %w", err)
 		}
 
@@ -1130,7 +1130,7 @@ func (r *NetworkInterfaceReconciler) deletePrefixes(
 	log.V(1).Info("Listing prefixes")
 	prefixes, err := r.DPDK.ListPrefixes(ctx, nic.UID)
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.GET_VM_NOT_FND) {
+		if !dpdk.IsStatusErrorCode(err, dpdk.GET_IFACE_NOT_FOUND) {
 			return fmt.Errorf("error listing prefixes: %w", err)
 		}
 

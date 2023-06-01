@@ -85,7 +85,7 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 			Spec: dpdk.LBTargetIPSpec{
 				Address: hop.TargetAddress,
 			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
+		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_ROUTE_FAIL4) != nil {
 			return fmt.Errorf("error creating lb route: %w", err)
 		}
 		return nil
@@ -105,7 +105,7 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 					MaxPort: hop.NATPortRangeTo,
 				},
 			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_NEIGHNAT_EXIST) != nil {
+		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_NEIGHNAT_ALREADY_EXISTS) != nil {
 			return fmt.Errorf("error nat route: %w", err)
 		}
 		return nil
@@ -129,7 +129,7 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 				Address: hop.TargetAddress,
 			},
 		},
-	}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
+	}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_ROUTE_FAIL4) != nil {
 		return fmt.Errorf("error creating route: %w", err)
 	}
 	return nil
@@ -155,7 +155,7 @@ func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) er
 			Spec: dpdk.LBTargetIPSpec{
 				Address: hop.TargetAddress,
 			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_RT_FAIL4) != nil {
+		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ADD_ROUTE_FAIL4) != nil {
 			return fmt.Errorf("error deleting lb route: %w", err)
 		}
 		return nil
@@ -175,7 +175,7 @@ func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) er
 					MaxPort: hop.NATPortRangeTo,
 				},
 			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_NEIGHNAT_NOFOUND) != nil {
+		}); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_NEIGHNAT_NOT_FOUND) != nil {
 			return fmt.Errorf("error deleting nat route: %w", err)
 		}
 		return nil
@@ -192,7 +192,7 @@ func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) er
 				Address: hop.TargetAddress,
 			},
 		},
-	}); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_RT) != nil {
+	}); dpdk.IgnoreStatusErrorCode(err, dpdk.DEL_ROUTE) != nil {
 		return fmt.Errorf("error deleting route: %w", err)
 	}
 	return nil
