@@ -745,7 +745,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	if lbTargetErr != nil {
 		errs = append(errs, fmt.Errorf("error reconciling lb target: %w", lbTargetErr))
 		log.Error(lbTargetErr, "Error reconciling lb targets")
-		r.Eventf(nic, corev1.EventTypeWarning, "ErrorReconcilingPrefixes", "Error reconciling prefixes: %v", err)
+		r.Eventf(nic, corev1.EventTypeWarning, "ErrorReconcilingLBTargets", "Error reconciling lb targets: %v", err)
 	} else {
 		log.V(1).Info("Reconciled prefixes")
 	}
