@@ -46,6 +46,7 @@ import (
 
 	mb "github.com/onmetal/metalbond"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -78,6 +79,7 @@ func main() {
 	var nodeName string
 	var dpserviceAddr string
 	var metalbondPeers []string
+	var metalbondDebug bool
 	var routerAddress net.IP
 	var publicVNI int
 	var metalnetDir string
@@ -87,6 +89,7 @@ func main() {
 	flag.StringVar(&nodeName, "node-name", hostName, "The node name to react to when reconciling network interfaces.")
 	flag.StringVar(&dpserviceAddr, "dp-service-address", "127.0.0.1:1337", "The address of net-dpservice.")
 	flag.StringSliceVar(&metalbondPeers, "metalbond-peer", nil, "The addresses of the metalbond peers.")
+	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
 	flag.IPVar(&routerAddress, "router-address", net.IP{}, "The address of the next router.")
 	flag.IntVar(&publicVNI, "public-vni", 100, "Virtual network identifier used for public routing announcements.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -102,6 +105,11 @@ func main() {
 
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)
+
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	if metalbondDebug {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	if routerAddress.Equal(net.IP{}) {
 		setupLog.Error(fmt.Errorf("must specify --router-address"), "invalid flags")
