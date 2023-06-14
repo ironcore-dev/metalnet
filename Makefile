@@ -12,6 +12,14 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+GITHUB_PAT_PATH ?=
+ifeq (,$(GITHUB_PAT_PATH))
+GITHUB_PAT_MOUNT ?=
+else
+GITHUB_PAT_MOUNT ?= --secret id=github_pat,src=$(GITHUB_PAT_PATH)
+endif
+BUILDARGS ?=
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -86,8 +94,8 @@ run-base: generate fmt lint ## Run the binary
 	go run ./main.go
 
 .PHONY: docker-build
-docker-build: test ## Build docker image with partitionlet.
-	docker build -t ${IMG} .
+docker-build: ## Build docker image with partitionlet.
+	docker build $(BUILDARGS) -t ${IMG} $(GITHUB_PAT_MOUNT) .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
