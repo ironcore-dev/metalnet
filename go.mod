@@ -6,10 +6,11 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/jaypipes/ghw v0.9.0
 	github.com/onmetal/controller-utils v0.7.0
-	github.com/onmetal/metalbond v0.3.0
+	github.com/onmetal/metalbond v0.3.1-0.20230705050506-6d0814d82ba1
 	github.com/onmetal/net-dpservice-go v0.1.12
 	github.com/onsi/ginkgo/v2 v2.9.4
 	github.com/onsi/gomega v1.27.6
+	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
 	google.golang.org/grpc v1.53.0
 	k8s.io/api v0.26.1
@@ -58,7 +59,6 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/vishvananda/netlink v1.1.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
@@ -91,4 +91,3 @@ require (
 )
 
 replace github.com/vishvananda/netlink => github.com/byteocean/netlink v1.1.1-0.20220608143109-d6cf8228de69
-replace github.com/onmetal/metalbond => /home/guvenc/development/metalbond
