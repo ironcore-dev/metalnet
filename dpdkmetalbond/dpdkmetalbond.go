@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"strings"
 	"sync"
@@ -55,7 +56,8 @@ type Client struct {
 }
 
 type ClientOptions struct {
-	IPv4Only bool
+	IPv4Only         bool
+	PreferredNetwork *net.IPNet
 }
 
 func NewClient(log *logr.Logger, dpdkClient dpdk.Client, opts ClientOptions) (*Client, error) {
@@ -154,6 +156,15 @@ func (c *Client) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, 
 		if !ok {
 			return fmt.Errorf("no registered LoadBalancer on this client for vni %d and ip %s", vni, ip)
 		}
+
+		if c.config.PreferredNetwork != nil {
+			targetAddress := net.ParseIP(hop.TargetAddress.String())
+			if !c.config.PreferredNetwork.Contains(targetAddress) {
+				c.log.Info(fmt.Sprintf("LB target %s is not in preferred network %s, ignoring...", targetAddress, c.config.PreferredNetwork))
+				return nil
+			}
+		}
+
 		if _, err := c.dpdk.CreateLBTargetIP(ctx, &dpdk.LBTargetIP{
 			LBTargetIPMetadata: dpdk.LBTargetIPMetadata{
 				UID: c.lbServerMap[uint32(vni)][ip],

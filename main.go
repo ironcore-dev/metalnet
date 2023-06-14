@@ -83,6 +83,7 @@ func main() {
 	var routerAddress net.IP
 	var publicVNI int
 	var metalnetDir string
+	var preferNetwork string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -96,6 +97,7 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&metalnetDir, "metalnet-dir", "/var/lib/metalnet", "Directory to store metalnet data at.")
+	flag.StringVar(&preferNetwork, "prefer-network", "", "Prefer network routes (e.g. 2001:db8::1/52)")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -153,6 +155,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	var preferredNetwork *net.IPNet
+	if len(preferNetwork) > 0 {
+		_, preferredNetwork, err = net.ParseCIDR(preferNetwork)
+		if err != nil {
+			log.Fatalf("invalid prefer network address: %s - %v", preferNetwork, err)
+		}
+	}
+
 	// setup net-dpservice client
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -177,7 +187,8 @@ func main() {
 	}
 
 	mbClient, err = dpdkmetalbond.NewClient(&logger, dpdkClient, dpdkmetalbond.ClientOptions{
-		IPv4Only: true,
+		IPv4Only:         true,
+		PreferredNetwork: preferredNetwork,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to initialize metalbond client")
