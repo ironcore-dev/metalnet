@@ -41,6 +41,8 @@ type NetworkInterfaceSpec struct {
 	NAT *NATDetails `json:"nat,omitempty"`
 	// NodeName is the name of the node on which the interface should be created.
 	NodeName *string `json:"nodeName,omitempty"`
+	// FirewallRules are the firewall rules to be applied to this interface.
+	FirewallRules []FirewallRuleSpec `json:"firewallRules,omitempty"`
 }
 
 // NetworkInterfaceStatus defines the observed state of NetworkInterface
@@ -81,6 +83,68 @@ const (
 	NetworkInterfaceStatePending NetworkInterfaceState = "Pending"
 	// NetworkInterfaceStateError is used for any NetworkInterface that is some error occurred.
 	NetworkInterfaceStateError NetworkInterfaceState = "Error"
+)
+
+// FirewallRuleSpec defines the desired state of FirewallRule
+type FirewallRuleSpec struct {
+	Direction         string          `json:"direction"`
+	Action            string          `json:"action"`
+	Priority          int32           `json:"priority"`
+	IpFamily          corev1.IPFamily `json:"ipFamily"`
+	SourcePrefix      IPPrefix        `json:"sourcePrefix,omitempty"`
+	DestinationPrefix IPPrefix        `json:"destinationPrefix,omitempty"`
+	ProtocolMatch     *ProtocolMatch  `json:"protocolMatch,omitempty"`
+}
+
+type ProtocolMatch struct {
+	ProtocolType *ProtocolType `json:"protocolType,omitempty"`
+	ICMP         *ICMPMatch    `json:"icmp,omitempty"`
+	PortRange    *PortMatch    `json:"portRange,omitempty"`
+}
+
+type ICMPMatch struct {
+	IcmpType *int32 `json:"icmpType,omitempty"`
+	IcmpCode *int32 `json:"icmpCode,omitempty"`
+}
+
+type PortMatch struct {
+	SrcPort    *int32 `json:"srcPort,omitempty"`
+	EndSrcPort int32  `json:"endSrcPort,omitempty"`
+	DstPort    *int32 `json:"dstPort,omitempty"`
+	EndDstPort int32  `json:"endDstPort,omitempty"`
+}
+
+// ProtocolType is the type for the network protocol
+type ProtocolType string
+
+const (
+	// FirewallRuleProtocolTypeTCP is used for TCP traffic.
+	FirewallRuleProtocolTypeTCP ProtocolType = "TCP"
+	// FirewallRuleProtocolTypeUDP is used for UDP traffic.
+	FirewallRuleProtocolTypeUDP ProtocolType = "UDP"
+	// FirewallRuleProtocolTypeICMP is used for ICMP traffic.
+	FirewallRuleProtocolTypeICMP ProtocolType = "ICMP"
+)
+
+// FirewallRuleAction is the action of the rule.
+type FirewallRuleAction string
+
+// Currently only Accept rules can be used.
+const (
+	// FirewallRuleAccept is used to accept traffic.
+	FirewallRuleAccept FirewallRuleAction = "ACCEPT"
+	// FirewallRuleDeny is used to deny traffic.
+	FirewallRuleDeny FirewallRuleAction = "DENY"
+)
+
+// FirewallRuleDirection is the direction of the rule.
+type FirewallRuleDirection string
+
+const (
+	// FirewallRuleIngress is used to define rules for incoming traffic.
+	FirewallRuleIngress FirewallRuleDirection = "INGRESS"
+	// FirewallRuleEgress is used to define rules for outgoing traffic.
+	FirewallRuleEgress FirewallRuleDirection = "EGRESS"
 )
 
 //+kubebuilder:object:root=true
