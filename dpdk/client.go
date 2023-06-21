@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"reflect"
+	"strconv"
 	"strings"
 
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
@@ -62,6 +64,89 @@ type Client interface {
 
 	IsVniAvailable(ctx context.Context, vni uint32) (bool, error)
 	ResetVni(ctx context.Context, vni uint32) error
+
+	ListFirewallRules(ctx context.Context, interfaceID string) (*FirewallRuleList, error)
+	AddFirewallRule(ctx context.Context, fwRule *FirewallRule) (*FirewallRule, error)
+	GetFirewallRule(ctx context.Context, interfaceID string, ruleID string) (*FirewallRule, error)
+	DeleteFirewallRule(ctx context.Context, interfaceID string, ruleID string) (*FirewallRule, error)
+}
+
+type Object interface {
+	GetKind() string
+	GetName() string
+	GetStatus() Status
+}
+
+type List interface {
+	GetItems() []Object
+}
+
+type TypeMeta struct {
+	Kind string
+}
+
+func (m *TypeMeta) GetKind() string {
+	return m.Kind
+}
+
+type Status struct {
+	Error   int32
+	Message string
+}
+
+var (
+	FirewallRuleKind     = reflect.TypeOf(FirewallRule{}).Name()
+	FirewallRuleListKind = reflect.TypeOf(FirewallRuleList{}).Name()
+)
+
+// FirewallRule section
+type FirewallRule struct {
+	TypeMeta
+	FirewallRuleMeta
+	Spec   FirewallRuleSpec
+	Status Status
+}
+
+type FirewallRuleMeta struct {
+	InterfaceID string
+}
+
+func (m *FirewallRule) GetName() string {
+	return m.FirewallRuleMeta.InterfaceID + "/" + m.Spec.RuleID
+}
+
+func (m *FirewallRule) GetStatus() Status {
+	return m.Status
+}
+
+type FirewallRuleSpec struct {
+	RuleID            string
+	TrafficDirection  string
+	FirewallAction    string
+	Priority          uint32
+	IpVersion         string
+	SourcePrefix      *netip.Prefix
+	DestinationPrefix *netip.Prefix
+	ProtocolFilter    *dpdkproto.ProtocolFilter
+}
+
+type FirewallRuleList struct {
+	TypeMeta
+	FirewallRuleListMeta
+	Status Status
+	Items  []FirewallRule
+}
+
+type FirewallRuleListMeta struct {
+	InterfaceID string
+}
+
+func (l *FirewallRuleList) GetItems() []Object {
+	res := make([]Object, len(l.Items))
+	for i := range l.Items {
+		res[i] = &l.Items[i]
+	}
+	return res
 }
 
 type NATRoute struct {
@@ -221,6 +306,59 @@ type DpLoadBalancerSpec struct {
 
 type DpLoadBalancerStatus struct {
 	UnderlayRoute netip.Addr
+}
+
+func ProtoFwRuleToFwRule(dpdkFwRule *dpdkproto.FirewallRule, interfaceID string) (*FirewallRule, error) {
+
+	srcPrefix, err := netip.ParsePrefix(string(dpdkFwRule.SourcePrefix.Address) + "/" + strconv.Itoa(int(dpdkFwRule.SourcePrefix.PrefixLength)))
+	if err != nil {
+		return nil, fmt.Errorf("error converting prefix: %w", err)
+	}
+
+	dstPrefix, err := netip.ParsePrefix(string(dpdkFwRule.DestinationPrefix.Address) + "/" + strconv.Itoa(int(dpdkFwRule.DestinationPrefix.PrefixLength)))
+	if err != nil {
+		return nil, fmt.Errorf("error converting prefix: %w", err)
+	}
+	var direction, action, ipv string
+	if dpdkFwRule.Direction == 0 {
+		direction = "Ingress"
+	} else {
+		direction = "Egress"
+	}
+	if dpdkFwRule.Action == 0 {
+		action = "Drop"
+	} else {
+		action = "Accept"
+	}
+	if dpdkFwRule.IpVersion == 0 {
+		ipv = "IPv4"
+	} else {
+		ipv = "IPv6"
+	}
+
+	return &FirewallRule{
+		TypeMeta: TypeMeta{Kind: FirewallRuleKind},
+		FirewallRuleMeta: FirewallRuleMeta{
+			InterfaceID: interfaceID,
+		},
+		Spec: FirewallRuleSpec{
+			RuleID:            string(dpdkFwRule.RuleID),
+			TrafficDirection:  direction,
+			FirewallAction:    action,
+			Priority:          dpdkFwRule.Priority,
+			IpVersion:         ipv,
+			SourcePrefix:      &srcPrefix,
+			DestinationPrefix: &dstPrefix,
+			ProtocolFilter:    dpdkFwRule.ProtocolFilter,
+		},
+	}, nil
+}
+
+func ProtoStatusToStatus(dpdkStatus *dpdkproto.Status) Status {
+	return Status{
+		Error:   dpdkStatus.Error,
+		Message: dpdkStatus.Message,
+	}
 }
 
 func LoadBalancerResponseToDpLoadBalancer(dpLB *dpdkproto.GetLoadBalancerResponse, LBUID types.UID) (*DpLoadBalancer, error) {
@@ -982,4 +1120,148 @@ func (c *client) DeleteLoadBalancer(ctx context.Context, uid types.UID) error {
 		return &StatusError{errorCode: errorCode, message: res.GetMessage()}
 	}
 	return nil
+}
+
+func (c *client) ListFirewallRules(ctx context.Context, interfaceID string) (*FirewallRuleList, error) {
+	res, err := c.DPDKonmetalClient.ListFirewallRules(ctx, &dpdkproto.ListFirewallRulesRequest{
+		InterfaceID: []byte(interfaceID),
+	})
+	if err != nil {
+		return &FirewallRuleList{}, err
+	}
+
+	fwRules := make([]FirewallRule, len(res.GetRules()))
+	for i, dpdkFwRule := range res.GetRules() {
+		fwRule, err := ProtoFwRuleToFwRule(dpdkFwRule, interfaceID)
+		if err != nil {
+			return &FirewallRuleList{}, err
+		}
+		fwRules[i] = *fwRule
+	}
+
+	return &FirewallRuleList{
+		TypeMeta:             TypeMeta{Kind: FirewallRuleListKind},
+		FirewallRuleListMeta: FirewallRuleListMeta{InterfaceID: interfaceID},
+		Items:                fwRules,
+	}, nil
+}
+
+func (c *client) AddFirewallRule(ctx context.Context, fwRule *FirewallRule) (*FirewallRule, error) {
+	var action, direction, ipv uint8
+
+	switch strings.ToLower(fwRule.Spec.FirewallAction) {
+	case "accept", "allow", "1":
+		action = 1
+		fwRule.Spec.FirewallAction = "Accept"
+	case "drop", "deny", "0":
+		action = 0
+		fwRule.Spec.FirewallAction = "Drop"
+	default:
+		return &FirewallRule{}, fmt.Errorf("firewall action can be only: drop/deny/0|accept/allow/1")
+	}
+
+	switch strings.ToLower(fwRule.Spec.TrafficDirection) {
+	case "ingress", "0":
+		direction = 0
+		fwRule.Spec.TrafficDirection = "Ingress"
+	case "egress", "1":
+		direction = 1
+		fwRule.Spec.TrafficDirection = "Egress"
+	default:
+		return &FirewallRule{}, fmt.Errorf("traffic direction can be only: Ingress = 0/Egress = 1")
+	}
+
+	switch strings.ToLower(fwRule.Spec.IpVersion) {
+	case "ipv4", "0":
+		ipv = 0
+		fwRule.Spec.IpVersion = "IPv4"
+	case "ipv6", "1":
+		ipv = 1
+		fwRule.Spec.IpVersion = "IPv6"
+	default:
+		return &FirewallRule{}, fmt.Errorf("ip version can be only: IPv4 = 0/IPv6 = 1")
+	}
+
+	req := dpdkproto.AddFirewallRuleRequest{
+		InterfaceID: []byte(fwRule.FirewallRuleMeta.InterfaceID),
+		Rule: &dpdkproto.FirewallRule{
+			RuleID:    []byte(fwRule.Spec.RuleID),
+			Direction: dpdkproto.TrafficDirection(direction),
+			Action:    dpdkproto.FirewallAction(action),
+			Priority:  fwRule.Spec.Priority,
+			IpVersion: dpdkproto.IPVersion(ipv),
+			SourcePrefix: &dpdkproto.Prefix{
+				IpVersion:    dpdkproto.IPVersion(ipv),
+				Address:      []byte(fwRule.Spec.SourcePrefix.Addr().String()),
+				PrefixLength: uint32(fwRule.Spec.SourcePrefix.Bits()),
+			},
+			DestinationPrefix: &dpdkproto.Prefix{
+				IpVersion:    dpdkproto.IPVersion(ipv),
+				Address:      []byte(fwRule.Spec.DestinationPrefix.Addr().String()),
+				PrefixLength: uint32(fwRule.Spec.DestinationPrefix.Bits()),
+			},
+			ProtocolFilter: fwRule.Spec.ProtocolFilter,
+		},
+	}
+	res, err := c.DPDKonmetalClient.AddFirewallRule(ctx, &req)
+	if err != nil {
+		return &FirewallRule{}, err
+	}
+	retFwrule := &FirewallRule{
+		TypeMeta:         TypeMeta{Kind: FirewallRuleKind},
+		FirewallRuleMeta: FirewallRuleMeta{InterfaceID: fwRule.InterfaceID},
+		Spec:             FirewallRuleSpec{RuleID: fwRule.Spec.RuleID},
+		Status:           ProtoStatusToStatus(res.Status)}
+	if res.Status.Error != 0 {
+		return retFwrule, ErrServerError
+	}
+	retFwrule.Spec = fwRule.Spec
+	return retFwrule, nil
+}
+
+func (c *client) DeleteFirewallRule(ctx context.Context, interfaceID string, ruleID string) (*FirewallRule, error) {
+	res, err := c.DPDKonmetalClient.DeleteFirewallRule(ctx, &dpdkproto.DeleteFirewallRuleRequest{
+		InterfaceID: []byte(interfaceID),
+		RuleID:      []byte(ruleID),
+	})
+	if err != nil {
+		return &FirewallRule{}, err
+	}
+	retFwrule := &FirewallRule{
+		TypeMeta:         TypeMeta{Kind: FirewallRuleKind},
+		FirewallRuleMeta: FirewallRuleMeta{InterfaceID: interfaceID},
+		Spec:             FirewallRuleSpec{RuleID: ruleID},
+		Status:           ProtoStatusToStatus(res),
+	}
+	if errorCode := res.GetError(); errorCode != 0 {
+		return retFwrule, ErrServerError
+	}
+	return retFwrule, nil
+}
+
+func (c *client) GetFirewallRule(ctx context.Context, ruleID string, interfaceID string) (*FirewallRule, error) {
+	res, err := c.DPDKonmetalClient.GetFirewallRule(ctx, &dpdkproto.GetFirewallRuleRequest{
+		InterfaceID: []byte(interfaceID),
+		RuleID:      []byte(ruleID),
+	})
+	if err != nil {
+		return &FirewallRule{}, err
+	}
+	if errorCode := res.GetStatus().GetError(); errorCode != 0 {
+		return &FirewallRule{
+			TypeMeta:         TypeMeta{Kind: FirewallRuleKind},
+			FirewallRuleMeta: FirewallRuleMeta{InterfaceID: interfaceID},
+			Spec:             FirewallRuleSpec{RuleID: ruleID},
+			Status:           ProtoStatusToStatus(res.Status)}, ErrServerError
+	}
+
+	return ProtoFwRuleToFwRule(res.Rule, interfaceID)
+}
+
+func (c *client) Initialized(ctx context.Context) (string, error) {
+	res, err := c.DPDKonmetalClient.Initialized(ctx, &dpdkproto.Empty{})
+	if err != nil {
+		return "", err
+	}
+	return res.Uuid, nil
 }

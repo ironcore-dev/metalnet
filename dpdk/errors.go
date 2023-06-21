@@ -52,7 +52,11 @@ const (
 	NO_BACKIP       = 421
 	NO_LB           = 422
 	NO_DROP_SUPPORT = 441
+
+	SERVER_ERROR = 2
 )
+
+var ErrServerError = fmt.Errorf("server error")
 
 type StatusError struct {
 	errorCode int32
