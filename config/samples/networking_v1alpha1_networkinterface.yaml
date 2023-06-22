@@ -16,4 +16,17 @@ spec:
   # loadBalancerTargets:
   #   - 194.11.242.110/32
   networkRef:
-    name: network-sample2
+    name: network-sample
+  firewallRules:
+    -
+      firewallRuleID: "fr1"
+      direction: "INGRESS"
+      action: "ACCEPT"
+      priority: 100
+      ipFamily: "IPv4"
+      sourcePrefix: "0.0.0.0/0"
+      protocolMatch:
+        protocolType: "TCP"
+        portRange:
+          srcPort: 80
+          endSrcPort: 80

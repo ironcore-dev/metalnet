@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // NetworkInterfaceSpec defines the desired state of NetworkInterface
@@ -87,9 +88,10 @@ const (
 
 // FirewallRuleSpec defines the desired state of FirewallRule
 type FirewallRuleSpec struct {
+	FirewallRuleID    types.UID       `json:"firewallRuleID"`
 	Direction         string          `json:"direction"`
 	Action            string          `json:"action"`
-	Priority          int32           `json:"priority"`
+	Priority          int32           `json:"priority,omitempty"`
 	IpFamily          corev1.IPFamily `json:"ipFamily"`
 	SourcePrefix      IPPrefix        `json:"sourcePrefix,omitempty"`
 	DestinationPrefix IPPrefix        `json:"destinationPrefix,omitempty"`

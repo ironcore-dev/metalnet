@@ -70,6 +70,72 @@ spec:
           spec:
             description: Spec defines the desired state of NetworkInterface.
             properties:
+              firewallRules:
+                description: FirewallRules are the firewall rules to be applied to
+                  this interface.
+                items:
+                  description: FirewallRuleSpec defines the desired state of FirewallRule
+                  properties:
+                    action:
+                      type: string
+                    destinationPrefix:
+                      type: string
+                    direction:
+                      type: string
+                    firewallRuleID:
+                      description: UID is a type that holds unique ID values, including
+                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
+                        to string.  Being a type captures intent and helps make sure
+                        that UIDs and names do not get conflated.
+                      type: string
+                    ipFamily:
+                      description: IPFamily represents the IP Family (IPv4 or IPv6).
+                        This type is used to express the family of an IP expressed
+                        by a type (e.g. service.spec.ipFamilies).
+                      type: string
+                    priority:
+                      format: int32
+                      type: integer
+                    protocolMatch:
+                      properties:
+                        icmp:
+                          properties:
+                            icmpCode:
+                              format: int32
+                              type: integer
+                            icmpType:
+                              format: int32
+                              type: integer
+                          type: object
+                        portRange:
+                          properties:
+                            dstPort:
+                              format: int32
+                              type: integer
+                            endDstPort:
+                              format: int32
+                              type: integer
+                            endSrcPort:
+                              format: int32
+                              type: integer
+                            srcPort:
+                              format: int32
+                              type: integer
+                          type: object
+                        protocolType:
+                          description: ProtocolType is the type for the network protocol
+                          type: string
+                      type: object
+                    sourcePrefix:
+                      type: string
+                  required:
+                  - action
+                  - direction
+                  - firewallRuleID
+                  - ipFamily
+                  - priority
+                  type: object
+                type: array
               ipFamilies:
                 description: IPFamilies defines which IPFamilies this NetworkInterface
                   is supporting
