@@ -57,6 +57,13 @@ spec:
                   format: int32
                   type: integer
                 type: array
+              peeredPrefixes:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: PeeredPrefixes are the exposed CIDRs of the peered networks.
+                type: object
             required:
             - id
             type: object
