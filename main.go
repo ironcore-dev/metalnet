@@ -205,16 +205,19 @@ func main() {
 		}
 	}
 
-	_, err = dpdkProtoClient.Init(context.Background(), &dpdkproto.InitConfig{})
-	if err != nil {
-		setupLog.Error(err, "dp-service can not be initialized")
-		os.Exit(1)
-	}
-
 	dpdkUUID, err := dpdkProtoClient.Initialized(context.Background(), &dpdkproto.Empty{})
 	if err != nil {
-		setupLog.Error(err, "dp-service down")
-		os.Exit(1)
+		_, err = dpdkProtoClient.Init(context.Background(), &dpdkproto.InitConfig{})
+		if err != nil {
+			setupLog.Error(err, "dp-service can not be initialized")
+			os.Exit(1)
+		}
+
+		dpdkUUID, err = dpdkProtoClient.Initialized(context.Background(), &dpdkproto.Empty{})
+		if err != nil {
+			setupLog.Error(err, "dp-service down")
+			os.Exit(1)
+		}
 	}
 
 	if err := metalnetclient.SetupNetworkInterfaceNetworkRefNameFieldIndexer(context.TODO(), mgr.GetFieldIndexer()); err != nil {
