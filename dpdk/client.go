@@ -62,6 +62,8 @@ type Client interface {
 
 	IsVniAvailable(ctx context.Context, vni uint32) (bool, error)
 	ResetVni(ctx context.Context, vni uint32) error
+
+	ListRoutes(ctx context.Context, vni uint32) ([]Route, error)
 }
 
 type NATRoute struct {
@@ -982,4 +984,45 @@ func (c *client) DeleteLoadBalancer(ctx context.Context, uid types.UID) error {
 		return &StatusError{errorCode: errorCode, message: res.GetMessage()}
 	}
 	return nil
+}
+
+func (c *client) ListRoutes(ctx context.Context, vni uint32) ([]Route, error) {
+	res, err := c.DPDKonmetalClient.ListRoutes(ctx, &dpdkproto.VNIMsg{
+		Vni: vni,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var routes []Route
+	for _, route := range res.Routes {
+		if route.Prefix != nil {
+			addr, err := netip.ParseAddr(string(route.Prefix.Address))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing dpdk prefix address: %w", err)
+			}
+
+			prefix, err := addr.Prefix(int(route.Prefix.PrefixLength))
+			if err != nil {
+				return nil, fmt.Errorf("invalid dpdk prefix length %d for address %s", route.Prefix.PrefixLength, addr)
+			}
+
+			r := Route{
+				RouteMetadata: RouteMetadata{
+					VNI: vni,
+				},
+				Spec: RouteSpec{
+					Prefix: prefix,
+					NextHop: RouteNextHop{
+						VNI:     route.NexthopVNI,
+						Address: netip.MustParseAddr(string(route.NexthopAddress)),
+					},
+				},
+			}
+			routes = append(routes, r)
+		}
+	}
+
+	return routes, nil
 }
