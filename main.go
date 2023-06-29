@@ -100,7 +100,8 @@ func main() {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	logger := zap.New(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(logger)
 
 	if routerAddress.Equal(net.IP{}) {
 		setupLog.Error(fmt.Errorf("must specify --router-address"), "invalid flags")
@@ -167,7 +168,7 @@ func main() {
 		KeepaliveInterval: 3,
 	}
 
-	mbClient, err = dpdkmetalbond.NewClient(dpdkClient, dpdkmetalbond.ClientOptions{
+	mbClient, err = dpdkmetalbond.NewClient(&logger, dpdkClient, dpdkmetalbond.ClientOptions{
 		IPv4Only: true,
 	})
 	if err != nil {
@@ -179,7 +180,7 @@ func main() {
 	metalbondClient := metalbond.NewClient(mbInstance)
 
 	for _, metalbondPeer := range metalbondPeers {
-		if err := mbInstance.AddPeer(metalbondPeer); err != nil {
+		if err := mbInstance.AddPeer(metalbondPeer, ""); err != nil {
 			setupLog.Error(err, "failed to add metalbond peer", "MetalbondPeer", metalbondPeer)
 			os.Exit(1)
 		}

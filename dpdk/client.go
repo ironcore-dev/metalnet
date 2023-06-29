@@ -48,6 +48,7 @@ type Client interface {
 	CreateLBPrefix(ctx context.Context, prefix *Prefix) (*Prefix, error)
 	DeleteLBPrefix(ctx context.Context, interfaceUID types.UID, prefix netip.Prefix) error
 
+	ListRoutes(ctx context.Context, vni uint32) ([]Route, error)
 	CreateRoute(ctx context.Context, route *Route) (*Route, error)
 	DeleteRoute(ctx context.Context, route *Route) error
 
@@ -975,6 +976,46 @@ func (c *client) DeleteLBPrefix(ctx context.Context, interfaceUID types.UID, pre
 	return nil
 }
 
+func (c *client) ListRoutes(ctx context.Context, vni uint32) ([]Route, error) {
+	res, err := c.DPDKonmetalClient.ListRoutes(ctx, &dpdkproto.VNIMsg{
+		Vni: vni,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var routes []Route
+	for _, route := range res.Routes {
+		if route.Prefix != nil {
+			addr, err := netip.ParseAddr(string(route.Prefix.Address))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing dpdk prefix address: %w", err)
+			}
+
+			prefix, err := addr.Prefix(int(route.Prefix.PrefixLength))
+			if err != nil {
+				return nil, fmt.Errorf("invalid dpdk prefix length %d for address %s", route.Prefix.PrefixLength, addr)
+			}
+
+			r := Route{
+				RouteMetadata: RouteMetadata{
+					VNI: vni,
+				},
+				Spec: RouteSpec{
+					Prefix: prefix,
+					NextHop: RouteNextHop{
+						VNI:     route.NexthopVNI,
+						Address: netip.MustParseAddr(string(route.NexthopAddress)),
+					},
+				},
+			}
+			routes = append(routes, r)
+		}
+	}
+
+	return routes, nil
+}
 func (c *client) CreateRoute(ctx context.Context, route *Route) (*Route, error) {
 	res, err := c.DPDKonmetalClient.AddRoute(ctx, &dpdkproto.VNIRouteMsg{
 		Vni: &dpdkproto.VNIMsg{Vni: route.VNI},
@@ -1122,6 +1163,7 @@ func (c *client) DeleteLoadBalancer(ctx context.Context, uid types.UID) error {
 	return nil
 }
 
+<<<<<<< HEAD
 func (c *client) ListFirewallRules(ctx context.Context, interfaceID string) (*FirewallRuleList, error) {
 	res, err := c.DPDKonmetalClient.ListFirewallRules(ctx, &dpdkproto.ListFirewallRulesRequest{
 		InterfaceID: []byte(interfaceID),

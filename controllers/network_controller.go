@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	"github.com/onmetal/controller-utils/clientutils"
@@ -235,11 +236,37 @@ func (r *NetworkReconciler) setDifference(s1, s2 sets.Set[uint32]) sets.Set[uint
 	return diff
 }
 
+func (r *NetworkReconciler) convertVni(vni string) (uint32, error) {
+	id, err := strconv.Atoi(vni)
+	if err != nil {
+		return 0, fmt.Errorf("error converting network vni to uint32: %w", err)
+	}
+	return uint32(id), nil
+}
+
 func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32, ownVniAvail bool) error {
 	mbPeerVnis, err := r.MBInternal.GetPeerVnis(vni)
 	if err != nil {
 		return err
 	}
+
+	// prepare peered prefixes
+	peeredPrefixes := map[uint32][]netip.Prefix{}
+	if len(network.Spec.PeeredPrefixes) > 0 {
+		for vni, prefixes := range network.Spec.PeeredPrefixes {
+			peeredVni, err := r.convertVni(vni)
+			if err != nil {
+				return err
+			}
+
+			peeredPrefixes[peeredVni] = []netip.Prefix{}
+			for _, prefix := range prefixes {
+				peeredPrefixes[peeredVni] = append(peeredPrefixes[peeredVni], prefix.Prefix)
+			}
+		}
+	}
+	r.MBInternal.SetPeeredPrefixes(vni, peeredPrefixes)
+
 	specPeerVnis := sets.New[uint32]()
 	if network.Spec.PeeredIDs != nil {
 		for _, v := range network.Spec.PeeredIDs {
@@ -256,7 +283,7 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 
 		for _, peeredVNI := range mbPeerVnis.UnsortedList() {
 			if !ownVniAvail {
-				if err := r.MBInternal.RemoveVniFromPeerVnis(log, vni, peeredVNI); err != nil {
+				if err := r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
 					return err
 				}
 			}
@@ -272,24 +299,24 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 			}
 			log.V(1).Info("Checked the existence of the peeredVNI in dp-service", "peeredVNI", peeredVNI)
 
+			if err := r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
+				return err
+			}
 			if !peeredVniAvail {
 				if err := r.unsubscribeIfSubscribed(ctx, peeredVNI); err != nil {
 					return err
 				}
 			} else if peeredVniAvail && ownVniAvail {
-				if err := r.recycleVNISubscription(ctx, vni); err != nil {
+				if err := r.MBInternal.CleanupNotPeeredRoutes(vni); err != nil {
 					return err
 				}
-				if err := r.recycleVNISubscription(ctx, peeredVNI); err != nil {
+				if err := r.MBInternal.CleanupNotPeeredRoutes(peeredVNI); err != nil {
 					return err
 				}
 			} else {
-				if err := r.recycleVNISubscription(ctx, peeredVNI); err != nil {
+				if err := r.MBInternal.CleanupNotPeeredRoutes(vni); err != nil {
 					return err
 				}
-			}
-			if err := r.MBInternal.RemoveVniFromPeerVnis(log, vni, peeredVNI); err != nil {
-				return err
 			}
 		}
 
@@ -303,6 +330,9 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 				return err
 			}
 			log.V(1).Info("Checked the existence of the peeredVNI in dp-service", "peeredVNI", peeredVNI)
+			if err := r.MBInternal.AddVniToPeerVnis(vni, peeredVNI); err != nil {
+				return err
+			}
 			if ownVniAvail && !peeredVniAvail {
 				if err := r.subscribeIfNotSubscribed(ctx, peeredVNI); err != nil {
 					return err
@@ -316,9 +346,6 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 					return err
 				}
 			}
-			if err := r.MBInternal.AddVniToPeerVnis(log, vni, peeredVNI); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -329,6 +356,9 @@ func (r *NetworkReconciler) deletePeeredVNIs(ctx context.Context, log logr.Logge
 	mbPeerVnis, _ := r.MBInternal.GetPeerVnis(vni)
 
 	for _, peeredVNI := range mbPeerVnis.UnsortedList() {
+		if err := r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
+			return err
+		}
 		log.V(1).Info("Checking existence of the ", "peered VNI", peeredVNI)
 		vniAvail, err := r.DPDK.IsVniAvailable(ctx, peeredVNI)
 		if err != nil {
@@ -338,25 +368,18 @@ func (r *NetworkReconciler) deletePeeredVNIs(ctx context.Context, log logr.Logge
 			if err := r.unsubscribeIfSubscribed(ctx, peeredVNI); err != nil {
 				return err
 			}
-		}
-		if err := r.MBInternal.RemoveVniFromPeerVnis(log, vni, peeredVNI); err != nil {
-			return err
+		} else {
+			if err := r.MBInternal.CleanupNotPeeredRoutes(peeredVNI); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 func (r *NetworkReconciler) recycleVNISubscription(ctx context.Context, vni uint32) error {
-	if err := r.unsubscribeIfSubscribed(ctx, vni); err != nil {
-		return err
-	}
-
-	if err := r.DPDK.ResetVni(ctx, vni); err != nil {
-		return fmt.Errorf("error resetting vni: %w", err)
-	}
-
-	if err := r.subscribeIfNotSubscribed(ctx, vni); err != nil {
-		return err
+	if err := r.Metalbond.GetRoutesForVni(ctx, metalbond.VNI(vni)); err != nil {
+		return fmt.Errorf("error getting routes for vni: %w", err)
 	}
 	return nil
 }
