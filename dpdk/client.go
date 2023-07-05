@@ -1163,7 +1163,6 @@ func (c *client) DeleteLoadBalancer(ctx context.Context, uid types.UID) error {
 	return nil
 }
 
-<<<<<<< HEAD
 func (c *client) ListFirewallRules(ctx context.Context, interfaceID string) (*FirewallRuleList, error) {
 	res, err := c.DPDKonmetalClient.ListFirewallRules(ctx, &dpdkproto.ListFirewallRulesRequest{
 		InterfaceID: []byte(interfaceID),

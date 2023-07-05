@@ -38,7 +38,7 @@ type MbInternalAccess interface {
 	AddLoadBalancerServer(vni uint32, ip string, uid types.UID) error
 	RemoveLoadBalancerServer(ip string, uid types.UID) error
 	IsVniPeered(vni uint32) bool
-	GetPeerVnis(vni uint32) (sets.Set[uint32], error)
+	GetPeerVnis(vni uint32) sets.Set[uint32]
 	AddVniToPeerVnis(vni, peeredVNI uint32) error
 	RemoveVniFromPeerVnis(vni, peeredVNI uint32) error
 	CleanupNotPeeredRoutes(vni uint32) error
@@ -86,14 +86,14 @@ func (c *Client) IsVniPeered(vni uint32) bool {
 	return false
 }
 
-func (c *Client) GetPeerVnis(vni uint32) (sets.Set[uint32], error) {
+func (c *Client) GetPeerVnis(vni uint32) sets.Set[uint32] {
 	c.mtxPeeredVnis.RLock()
 	defer c.mtxPeeredVnis.RUnlock()
 	vnis, ok := c.peeredVnis[vni]
 	if !ok {
-		return sets.New[uint32](), nil
+		return sets.New[uint32]()
 	}
-	return vnis, nil
+	return vnis
 }
 
 func (c *Client) AddVniToPeerVnis(vni, peeredVNI uint32) error {
@@ -290,25 +290,28 @@ func (c *Client) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destinatio
 }
 
 func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
+	c.log.Info("AddRoute", "vni", vni, "dest", dest, "hop", hop)
 	var errStrs []string
 
 	if err := c.addLocalRoute(vni, vni, dest, hop); err != nil {
 		errStrs = append(errStrs, err.Error())
 	}
-	mbPeerVnis, _ := c.GetPeerVnis(uint32(vni))
-	peeredPfxes, ok := c.peeredPrefixes[uint32(vni)]
 
-	for _, peeredVNI := range mbPeerVnis.UnsortedList() {
-		if hop.Type == mbproto.NextHopType_STANDARD {
-			// by default we add the route if no peered prefixes are set
+	if hop.Type == mbproto.NextHopType_STANDARD {
+		mbPeerVnis := c.GetPeerVnis(uint32(vni))
+		peeredPrefixes, ok := c.peeredPrefixes[uint32(vni)]
+		c.log.Info("GetPeerVnis", "vni", vni, "mbPeerVnis", mbPeerVnis, "peeredPrefixes", peeredPrefixes)
+
+		for _, peeredVNI := range mbPeerVnis.UnsortedList() {
+			// by default, we add the route if no peered prefixes are set
 			addRoute := true
 			if ok {
-				peeredPrefixes, exists := peeredPfxes[peeredVNI]
+				allowedPeeredPrefixes, exists := peeredPrefixes[peeredVNI]
 				// if we have set peered prefixes for this VNI, we need to check if the destination is in the list
 				if exists {
 					// if the destination is not in the list of peered prefixes, we don't add the route
 					addRoute = false
-					for _, peeredPrefix := range peeredPrefixes {
+					for _, peeredPrefix := range allowedPeeredPrefixes {
 						if peeredPrefix.Contains(dest.Prefix.Addr()) {
 							addRoute = true
 							break
@@ -333,12 +336,13 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 }
 
 func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
+	c.log.Info("RemoveRoute", "vni", vni, "dest", dest, "hop", hop)
 	var errStrs []string
 
 	if err := c.removeLocalRoute(vni, vni, dest, hop); err != nil {
 		errStrs = append(errStrs, err.Error())
 	}
-	mbPeerVnis, _ := c.GetPeerVnis(uint32(vni))
+	mbPeerVnis := c.GetPeerVnis(uint32(vni))
 	for _, peeredVNI := range mbPeerVnis.UnsortedList() {
 		if hop.Type == mbproto.NextHopType_STANDARD {
 			if err := c.removeLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
