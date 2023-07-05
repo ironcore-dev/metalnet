@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/netip"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/onmetal/controller-utils/clientutils"
@@ -157,7 +158,7 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 			return ctrl.Result{}, err
 		}
 		log.V(1).Info("Reconciled peered VNIs")
-		return ctrl.Result{}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: 5 * time.Second}, nil
 	}
 	log.V(1).Info("Checked existence of the VNI")
 
@@ -245,10 +246,8 @@ func (r *NetworkReconciler) convertVni(vni string) (uint32, error) {
 }
 
 func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32, ownVniAvail bool) error {
-	mbPeerVnis, err := r.MBInternal.GetPeerVnis(vni)
-	if err != nil {
-		return err
-	}
+	log.V(1).Info("reconcilePeeredVNIs", "vni", vni, "ownVniAvail", ownVniAvail)
+	mbPeerVnis := r.MBInternal.GetPeerVnis(vni)
 
 	// prepare peered prefixes
 	peeredPrefixes := map[uint32][]netip.Prefix{}
@@ -292,12 +291,12 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 
 	if missing.Len() != 0 || added.Len() != 0 {
 		for _, peeredVNI := range missing.UnsortedList() {
-			log.V(1).Info("Checking the existence of the peeredVNI in dp-service", "peeredVNI", peeredVNI)
+			log.V(1).Info("Checking the existence of the peeredVNI in dp-service (missing)", "peeredVNI", peeredVNI)
 			peeredVniAvail, err := r.DPDK.IsVniAvailable(ctx, peeredVNI)
 			if err != nil {
 				return err
 			}
-			log.V(1).Info("Checked the existence of the peeredVNI in dp-service", "peeredVNI", peeredVNI)
+			log.V(1).Info("Checked the existence of the peeredVNI in dp-service (missing)", "peeredVNI", peeredVNI, "peeredVniAvail", peeredVniAvail)
 
 			if err := r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
 				return err
@@ -324,12 +323,12 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 			if !ownVniAvail {
 				return nil
 			}
-			log.V(1).Info("Checking the existence of the peeredVNI in dp-service", "peeredVNI", peeredVNI)
+			log.V(1).Info("Checking the existence of the peeredVNI in dp-service (added)", "peeredVNI", peeredVNI)
 			peeredVniAvail, err := r.DPDK.IsVniAvailable(ctx, peeredVNI)
 			if err != nil {
 				return err
 			}
-			log.V(1).Info("Checked the existence of the peeredVNI in dp-service", "peeredVNI", peeredVNI)
+			log.V(1).Info("Checked the existence of the peeredVNI in dp-service (added)", "peeredVNI", peeredVNI, "peeredVniAvail", peeredVniAvail)
 			if err := r.MBInternal.AddVniToPeerVnis(vni, peeredVNI); err != nil {
 				return err
 			}
@@ -353,7 +352,7 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 }
 
 func (r *NetworkReconciler) deletePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32) error {
-	mbPeerVnis, _ := r.MBInternal.GetPeerVnis(vni)
+	mbPeerVnis := r.MBInternal.GetPeerVnis(vni)
 
 	for _, peeredVNI := range mbPeerVnis.UnsortedList() {
 		if err := r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
