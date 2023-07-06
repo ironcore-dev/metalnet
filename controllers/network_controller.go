@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -235,14 +234,6 @@ func (r *NetworkReconciler) setDifference(s1, s2 sets.Set[uint32]) sets.Set[uint
 		}
 	}
 	return diff
-}
-
-func (r *NetworkReconciler) convertVni(vni string) (uint32, error) {
-	id, err := strconv.Atoi(vni)
-	if err != nil {
-		return 0, fmt.Errorf("error converting network vni to uint32: %w", err)
-	}
-	return uint32(id), nil
 }
 
 func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32, ownVniAvail bool) error {
