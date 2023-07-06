@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/onmetal/controller-utils/clientutils"
@@ -157,7 +156,7 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 			return ctrl.Result{}, err
 		}
 		log.V(1).Info("Reconciled peered VNIs")
-		return ctrl.Result{Requeue: true, RequeueAfter: 5 * time.Second}, nil
+		return ctrl.Result{}, nil
 	}
 	log.V(1).Info("Checked existence of the VNI")
 
@@ -372,8 +371,8 @@ func (r *NetworkReconciler) recycleVNISubscription(ctx context.Context, vni uint
 }
 
 func (r *NetworkReconciler) unsubscribeIfSubscribed(ctx context.Context, vni uint32) error {
-	if err := r.Metalbond.Unsubscribe(ctx, metalbond.VNI(vni)); metalbond.IgnoreNotSubscribedToVNIError(err) != nil {
-		return fmt.Errorf("error subscribing to vni: %w", err)
+	if err := r.Metalbond.Unsubscribe(ctx, metalbond.VNI(vni)); metalbond.IgnoreAlreadyUnsubscribedToVNIError(err) != nil {
+		return fmt.Errorf("error unsubscribing to vni: %w", err)
 	}
 	return nil
 }

@@ -30,6 +30,20 @@ func IgnoreAlreadySubscribedToVNIError(err error) error {
 	return err
 }
 
+func IsAlreadyUnsubscribedToVNIError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "Already unsubscribed from VNI")
+}
+
+func IgnoreAlreadyUnsubscribedToVNIError(err error) error {
+	if IsAlreadyUnsubscribedToVNIError(err) {
+		return nil
+	}
+	return err
+}
+
 // TODO: IsNotSubscribedToVNIError is not yet implemented on metalbond side.
 // Verify as soon as it is.
 
