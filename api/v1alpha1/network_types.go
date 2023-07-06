@@ -34,6 +34,7 @@ type NetworkSpec struct {
 	PeeredIDs []int32 `json:"peeredIDs,omitempty"`
 
 	// PeeredPrefixes are the allowed CIDRs of the peered networks.
+	// +optional
 	// +patchMergeKey=id
 	// +patchStrategy=merge
 	// +listType=map
