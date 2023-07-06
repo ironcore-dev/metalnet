@@ -252,14 +252,11 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 	// prepare peered prefixes
 	peeredPrefixes := map[uint32][]netip.Prefix{}
 	if len(network.Spec.PeeredPrefixes) > 0 {
-		for vni, prefixes := range network.Spec.PeeredPrefixes {
-			peeredVni, err := r.convertVni(vni)
-			if err != nil {
-				return err
-			}
+		for _, prefixes := range network.Spec.PeeredPrefixes {
+			peeredVni := uint32(prefixes.ID)
 
 			peeredPrefixes[peeredVni] = []netip.Prefix{}
-			for _, prefix := range prefixes {
+			for _, prefix := range prefixes.Prefixes {
 				peeredPrefixes[peeredVni] = append(peeredPrefixes[peeredVni], prefix.Prefix)
 			}
 		}
