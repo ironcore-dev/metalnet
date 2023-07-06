@@ -455,9 +455,13 @@ func (in *NetworkSpec) DeepCopyInto(out *NetworkSpec) {
 	}
 	if in.PeeredPrefixes != nil {
 		in, out := &in.PeeredPrefixes, &out.PeeredPrefixes
-		*out = make([]PeeredPrefix, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = new([]PeeredPrefix)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]PeeredPrefix, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
+			}
 		}
 	}
 }

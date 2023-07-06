@@ -38,7 +38,7 @@ type NetworkSpec struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=id
-	PeeredPrefixes []PeeredPrefix `json:"peeredPrefixes,omitempty" patchStrategy:"merge" patchMergeKey:"peeredPrefixes"`
+	PeeredPrefixes *[]PeeredPrefix `json:"peeredPrefixes,omitempty" patchStrategy:"merge" patchMergeKey:"peeredPrefixes"`
 }
 
 // PeeredPrefix contains information of the peered networks and their allowed CIDRs.
