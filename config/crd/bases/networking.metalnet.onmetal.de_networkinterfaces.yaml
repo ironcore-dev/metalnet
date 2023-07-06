@@ -133,7 +133,6 @@ spec:
                   - direction
                   - firewallRuleID
                   - ipFamily
-                  - priority
                   type: object
                 type: array
               ipFamilies:

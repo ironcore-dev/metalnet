@@ -58,12 +58,26 @@ spec:
                   type: integer
                 type: array
               peeredPrefixes:
-                additionalProperties:
-                  items:
-                    type: string
-                  type: array
-                description: PeeredPrefixes are the exposed CIDRs of the peered networks.
-                type: object
+                description: PeeredPrefixes are the allowed CIDRs of the peered networks.
+                items:
+                  description: PeeredPrefixes contains information of the peered networks
+                    and their allowed CIDRs.
+                  properties:
+                    id:
+                      format: int32
+                      type: integer
+                    peeredPrefixes:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - id
+                  - peeredPrefixes
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - id
+                x-kubernetes-list-type: map
             required:
             - id
             type: object

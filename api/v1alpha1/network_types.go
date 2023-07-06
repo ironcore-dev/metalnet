@@ -32,8 +32,19 @@ type NetworkSpec struct {
 
 	// PeeredIDs are the IDs of networks to peer with.
 	PeeredIDs []int32 `json:"peeredIDs,omitempty"`
-	// PeeredPrefixes are the exposed CIDRs of the peered networks.
-	PeeredPrefixes map[string][]IPPrefix `json:"peeredPrefixes,omitempty"`
+
+	// PeeredPrefixes are the allowed CIDRs of the peered networks.
+	// +patchMergeKey=id
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=id
+	PeeredPrefixes []PeeredPrefixes `json:"peeredPrefixes,omitempty" patchStrategy:"merge" patchMergeKey:"peeredPrefixes"`
+}
+
+// PeeredPrefixes contains information of the peered networks and their allowed CIDRs.
+type PeeredPrefixes struct {
+	ID       int32      `json:"id"`
+	Prefixes []IPPrefix `json:"peeredPrefixes"`
 }
 
 //+kubebuilder:object:root=true
