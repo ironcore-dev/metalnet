@@ -60,19 +60,19 @@ spec:
               peeredPrefixes:
                 description: PeeredPrefixes are the allowed CIDRs of the peered networks.
                 items:
-                  description: PeeredPrefixes contains information of the peered networks
+                  description: PeeredPrefix contains information of the peered networks
                     and their allowed CIDRs.
                   properties:
                     id:
                       format: int32
                       type: integer
-                    peeredPrefixes:
+                    prefixes:
                       items:
                         type: string
                       type: array
                   required:
                   - id
-                  - peeredPrefixes
+                  - prefixes
                   type: object
                 type: array
                 x-kubernetes-list-map-keys:

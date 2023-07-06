@@ -38,13 +38,13 @@ type NetworkSpec struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=id
-	PeeredPrefixes []PeeredPrefixes `json:"peeredPrefixes,omitempty" patchStrategy:"merge" patchMergeKey:"peeredPrefixes"`
+	PeeredPrefixes []PeeredPrefix `json:"peeredPrefixes,omitempty" patchStrategy:"merge" patchMergeKey:"peeredPrefixes"`
 }
 
-// PeeredPrefixes contains information of the peered networks and their allowed CIDRs.
-type PeeredPrefixes struct {
+// PeeredPrefix contains information of the peered networks and their allowed CIDRs.
+type PeeredPrefix struct {
 	ID       int32      `json:"id"`
-	Prefixes []IPPrefix `json:"peeredPrefixes"`
+	Prefixes []IPPrefix `json:"prefixes"`
 }
 
 //+kubebuilder:object:root=true
