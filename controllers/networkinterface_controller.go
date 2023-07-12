@@ -705,7 +705,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	log.V(1).Info("Got network", "NetworkKey", networkKey, "VNI", vni)
 
 	log.V(1).Info("Applying interface")
-	pciAddr, underlayRoute, err := r.applyInterface(ctx, log, nic, vni)
+	pciAddr, underlayRoute, isCreated, err := r.applyInterface(ctx, log, nic, vni)
 	if err != nil {
 		if err := r.patchStatus(ctx, nic, func() {
 			nic.Status = metalnetv1alpha1.NetworkInterfaceStatus{
@@ -718,6 +718,24 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	}
 	log.V(1).Info("Applied interface", "PCIAddress", pciAddr, "UnderlayRoute", underlayRoute)
 
+	// The interface was just created via GRPC and object status state is already Ready.
+	// So toggle the status state to reflect the "readiness" of the interface.
+	if isCreated && nic.Status.State == metalnetv1alpha1.NetworkInterfaceStateReady {
+		if err := r.patchStatus(ctx, nic, func() {
+			nic.Status = metalnetv1alpha1.NetworkInterfaceStatus{
+				State: metalnetv1alpha1.NetworkInterfaceStatePending,
+			}
+		}); err != nil {
+			log.Error(err, "Error patching network interface status to pending")
+		}
+		if err := r.patchStatus(ctx, nic, func() {
+			nic.Status = metalnetv1alpha1.NetworkInterfaceStatus{
+				State: metalnetv1alpha1.NetworkInterfaceStateReady,
+			}
+		}); err != nil {
+			log.Error(err, "Error patching network interface status to ready")
+		}
+	}
 	var errs []error
 
 	log.V(1).Info("Reconciling virtual ip")
@@ -1075,12 +1093,12 @@ func (r *NetworkInterfaceReconciler) reconcileFirewallRules(ctx context.Context,
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log logr.Logger, nic *metalnetv1alpha1.NetworkInterface, vni uint32) (*ghw.PCIAddress, netip.Addr, error) {
+func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log logr.Logger, nic *metalnetv1alpha1.NetworkInterface, vni uint32) (*ghw.PCIAddress, netip.Addr, bool, error) {
 	log.V(1).Info("Getting dpdk interface")
 	iface, err := r.DPDK.GetInterface(ctx, nic.UID)
 	if err != nil {
 		if !dpdk.IsStatusErrorCode(err, dpdk.NOT_FOUND) {
-			return nil, netip.Addr{}, fmt.Errorf("error getting dpdk interface: %w", err)
+			return nil, netip.Addr{}, false, fmt.Errorf("error getting dpdk interface: %w", err)
 		}
 
 		log.V(1).Info("DPDK interface does not yet exist, creating it")
@@ -1088,14 +1106,14 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 		log.V(1).Info("Getting or claiming pci address")
 		addr, err := r.NetFnsManager.GetOrClaim(nic.UID)
 		if err != nil {
-			return nil, netip.Addr{}, fmt.Errorf("error claiming address: %w", err)
+			return nil, netip.Addr{}, false, fmt.Errorf("error claiming address: %w", err)
 		}
 		log.V(1).Info("Got pci address", "Address", addr)
 
 		log.V(1).Info("Converting to dpdk device")
 		dpdkDevice, err := r.convertToDPDKDevice(*addr)
 		if err != nil {
-			return nil, netip.Addr{}, fmt.Errorf("error converting %s to dpdk device: %w", addr, err)
+			return nil, netip.Addr{}, false, fmt.Errorf("error converting %s to dpdk device: %w", addr, err)
 		}
 		log.V(1).Info("Converted to dpdk device", "DPDKDevice", dpdkDevice)
 
@@ -1110,15 +1128,15 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 			},
 		})
 		if err != nil {
-			return nil, netip.Addr{}, fmt.Errorf("error creating dpdk interface: %w", err)
+			return nil, netip.Addr{}, false, fmt.Errorf("error creating dpdk interface: %w", err)
 		}
 		log.V(1).Info("Adding interface routes if not exist")
 		ips := workaroundNoNetworkInterfaceIPV6(getNetworkInterfaceIPs(nic))
 		if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, iface.Status.UnderlayRoute); err != nil {
-			return nil, netip.Addr{}, err
+			return nil, netip.Addr{}, false, err
 		}
 		log.V(1).Info("Added interface routes if not existed")
-		return addr, iface.Status.UnderlayRoute, nil
+		return addr, iface.Status.UnderlayRoute, true, nil
 	}
 
 	log.V(1).Info("DPDK interface exists")
@@ -1126,17 +1144,17 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 	log.V(1).Info("Getting pci device for uid")
 	addr, err := r.NetFnsManager.Get(nic.UID)
 	if err != nil {
-		return nil, netip.Addr{}, fmt.Errorf("error getting pci address: %w", err)
+		return nil, netip.Addr{}, false, fmt.Errorf("error getting pci address: %w", err)
 	}
 	log.V(1).Info("Got pci device for uid", "PCIDevice", addr)
 
 	log.V(1).Info("Adding interface route if not exists")
 	ips := workaroundNoNetworkInterfaceIPV6(getNetworkInterfaceIPs(nic))
 	if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, iface.Status.UnderlayRoute); err != nil {
-		return nil, netip.Addr{}, err
+		return nil, netip.Addr{}, false, err
 	}
 	log.V(1).Info("Added interface route if not existed")
-	return addr, iface.Status.UnderlayRoute, nil
+	return addr, iface.Status.UnderlayRoute, false, nil
 }
 
 func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (string, error) {
