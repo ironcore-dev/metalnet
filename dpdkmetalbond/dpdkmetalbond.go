@@ -160,7 +160,7 @@ func (c *Client) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, 
 		if c.config.PreferredNetwork != nil {
 			targetAddress := net.ParseIP(hop.TargetAddress.String())
 			if !c.config.PreferredNetwork.Contains(targetAddress) {
-				c.log.Info(fmt.Sprintf("LB target %s is not in preferred network %s, ignoring...", targetAddress, c.config.PreferredNetwork))
+				c.log.V(1).Info(fmt.Sprintf("LB target %s is not in preferred network %s, ignoring...", targetAddress, c.config.PreferredNetwork))
 				return nil
 			}
 		}
@@ -290,7 +290,7 @@ func (c *Client) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destinatio
 }
 
 func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
-	c.log.Info("AddRoute", "vni", vni, "dest", dest, "hop", hop)
+	c.log.V(1).Info("AddRoute", "VNI", vni, "dest", dest, "hop", hop)
 	var errStrs []string
 
 	if err := c.addLocalRoute(vni, vni, dest, hop); err != nil {
@@ -300,7 +300,7 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 	if hop.Type == mbproto.NextHopType_STANDARD {
 		mbPeerVnis := c.GetPeerVnis(uint32(vni))
 		peeredPrefixes, ok := c.peeredPrefixes[uint32(vni)]
-		c.log.Info("GetPeerVnis", "vni", vni, "mbPeerVnis", mbPeerVnis, "peeredPrefixes", peeredPrefixes)
+		c.log.V(1).Info("GetPeerVnis", "VNI", vni, "mbPeerVnis", mbPeerVnis, "peeredPrefixes", peeredPrefixes)
 
 		for _, peeredVNI := range mbPeerVnis.UnsortedList() {
 			// by default, we add the route if no peered prefixes are set
@@ -336,7 +336,7 @@ func (c *Client) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error
 }
 
 func (c *Client) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
-	c.log.Info("RemoveRoute", "vni", vni, "dest", dest, "hop", hop)
+	c.log.V(1).Info("RemoveRoute", "VNI", vni, "dest", dest, "hop", hop)
 	var errStrs []string
 
 	if err := c.removeLocalRoute(vni, vni, dest, hop); err != nil {
