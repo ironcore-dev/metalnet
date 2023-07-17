@@ -241,8 +241,8 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 
 	// prepare peered prefixes
 	peeredPrefixes := map[uint32][]netip.Prefix{}
-	if network.Spec.PeeredPrefixes != nil && len(*network.Spec.PeeredPrefixes) > 0 {
-		for _, prefixes := range *network.Spec.PeeredPrefixes {
+	if len(network.Spec.PeeredPrefixes) > 0 {
+		for _, prefixes := range network.Spec.PeeredPrefixes {
 			peeredVni := uint32(prefixes.ID)
 
 			peeredPrefixes[peeredVni] = []netip.Prefix{}
