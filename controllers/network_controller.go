@@ -24,9 +24,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/onmetal/controller-utils/clientutils"
 	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
-	"github.com/onmetal/metalnet/dpdk"
 	"github.com/onmetal/metalnet/dpdkmetalbond"
 	"github.com/onmetal/metalnet/metalbond"
+	dpdk "github.com/onmetal/net-dpservice-go/api"
+	dpdkclient "github.com/onmetal/net-dpservice-go/client"
+	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -49,7 +51,7 @@ type NetworkReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	DPDK          dpdk.Client
+	DPDK          dpdkclient.Client
 	Metalbond     metalbond.Client
 	MBInternal    dpdkmetalbond.MbInternalAccess
 	RouterAddress netip.Addr
@@ -137,12 +139,12 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 	vni := uint32(network.Spec.ID)
 
 	log.V(1).Info("Checking existence of the VNI")
-	vniAvail, err := r.DPDK.IsVniAvailable(ctx, vni)
+	vniAvail, err := r.DPDK.GetVni(ctx, vni, 0)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if !vniAvail {
+	if !vniAvail.Spec.InUse {
 		if !r.MBInternal.IsVniPeered(vni) {
 			log.V(1).Info("VNI doesn't exist in dp-service and no peering, unsubscribe from it")
 			if err := r.unsubscribeIfSubscribed(ctx, vni); err != nil {
@@ -152,7 +154,7 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 		}
 
 		log.V(1).Info("Reconciling peered VNIs")
-		if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail); err != nil {
+		if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail.Spec.InUse); err != nil {
 			return ctrl.Result{}, err
 		}
 		log.V(1).Info("Reconciled peered VNIs")
@@ -167,7 +169,7 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 	log.V(1).Info("Created dpdk default route if not existed")
 
 	log.V(1).Info("Reconciling peered VNIs")
-	if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail); err != nil {
+	if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail.Spec.InUse); err != nil {
 		return ctrl.Result{}, err
 	}
 	log.V(1).Info("Reconciled peered VNIs")
@@ -182,37 +184,27 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 }
 
 func (r *NetworkReconciler) createDefaultRouteIfNotExists(ctx context.Context, vni uint32) error {
+	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
 	if _, err := r.DPDK.CreateRoute(ctx, &dpdk.Route{
-		RouteMetadata: dpdk.RouteMetadata{
+		RouteMeta: dpdk.RouteMeta{
 			VNI: vni,
 		},
 		Spec: dpdk.RouteSpec{
-			Prefix: netip.MustParsePrefix("0.0.0.0/0"),
-			NextHop: dpdk.RouteNextHop{
-				VNI:     vni,
-				Address: r.RouterAddress,
+			Prefix: &defaultRoutePrefix,
+			NextHop: &dpdk.RouteNextHop{
+				VNI: vni,
+				IP:  &r.RouterAddress,
 			},
 		},
-	}); dpdk.IgnoreStatusErrorCode(err, dpdk.ROUTE_EXISTS) != nil {
+	}); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.ROUTE_EXISTS) != nil {
 		return fmt.Errorf("error creating route: %w", err)
 	}
 	return nil
 }
 
 func (r *NetworkReconciler) deleteDefaultRouteIfExists(ctx context.Context, vni uint32) error {
-	if err := r.DPDK.DeleteRoute(ctx, &dpdk.Route{
-		RouteMetadata: dpdk.RouteMetadata{
-			VNI: vni,
-		},
-		Spec: dpdk.RouteSpec{
-			Prefix: netip.MustParsePrefix("0.0.0.0/0"),
-			NextHop: dpdk.RouteNextHop{
-				VNI:     vni,
-				Address: r.RouterAddress,
-			},
-		},
-	}); dpdk.IgnoreStatusErrorCode(err, dpdk.NO_VNI) != nil &&
-		dpdk.IgnoreStatusErrorCode(err, dpdk.ROUTE_NOT_FOUND) != nil {
+	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
+	if _, err := r.DPDK.DeleteRoute(ctx, vni, &defaultRoutePrefix); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND) != nil {
 		return fmt.Errorf("error deleting route: %w", err)
 	}
 	return nil
@@ -279,7 +271,7 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 	if missing.Len() != 0 || added.Len() != 0 {
 		for _, peeredVNI := range missing.UnsortedList() {
 			log.V(1).Info("Checking the existence of the peeredVNI in dp-service (missing)", "peeredVNI", peeredVNI)
-			peeredVniAvail, err := r.DPDK.IsVniAvailable(ctx, peeredVNI)
+			peeredVniAvail, err := r.DPDK.GetVni(ctx, peeredVNI, 0)
 			if err != nil {
 				return err
 			}
@@ -288,11 +280,11 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 			if err := r.MBInternal.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
 				return err
 			}
-			if !peeredVniAvail {
+			if !peeredVniAvail.Spec.InUse {
 				if err := r.unsubscribeIfSubscribed(ctx, peeredVNI); err != nil {
 					return err
 				}
-			} else if peeredVniAvail && ownVniAvail {
+			} else if peeredVniAvail.Spec.InUse && ownVniAvail {
 				if err := r.MBInternal.CleanupNotPeeredRoutes(vni); err != nil {
 					return err
 				}
@@ -311,7 +303,7 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 				return nil
 			}
 			log.V(1).Info("Checking the existence of the peeredVNI in dp-service (added)", "peeredVNI", peeredVNI)
-			peeredVniAvail, err := r.DPDK.IsVniAvailable(ctx, peeredVNI)
+			peeredVniAvail, err := r.DPDK.GetVni(ctx, peeredVNI, 0)
 			if err != nil {
 				return err
 			}
@@ -319,12 +311,12 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 			if err := r.MBInternal.AddVniToPeerVnis(vni, peeredVNI); err != nil {
 				return err
 			}
-			if ownVniAvail && !peeredVniAvail {
+			if ownVniAvail && !peeredVniAvail.Spec.InUse {
 				if err := r.subscribeIfNotSubscribed(ctx, peeredVNI); err != nil {
 					return err
 				}
 			}
-			if ownVniAvail && peeredVniAvail {
+			if ownVniAvail && peeredVniAvail.Spec.InUse {
 				if err := r.recycleVNISubscription(ctx, vni); err != nil {
 					return err
 				}
@@ -346,11 +338,11 @@ func (r *NetworkReconciler) deletePeeredVNIs(ctx context.Context, log logr.Logge
 			return err
 		}
 		log.V(1).Info("Checking existence of the ", "peered VNI", peeredVNI)
-		vniAvail, err := r.DPDK.IsVniAvailable(ctx, peeredVNI)
+		vniAvail, err := r.DPDK.GetVni(ctx, peeredVNI, 0)
 		if err != nil {
 			return err
 		}
-		if !vniAvail {
+		if !vniAvail.Spec.InUse {
 			if err := r.unsubscribeIfSubscribed(ctx, peeredVNI); err != nil {
 				return err
 			}

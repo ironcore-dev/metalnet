@@ -38,13 +38,13 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/onmetal/metalnet/dpdk"
 	"github.com/onmetal/metalnet/dpdkmetalbond"
 	"github.com/onmetal/metalnet/metalbond"
 	"github.com/onmetal/metalnet/netfns"
 	"github.com/onmetal/metalnet/sysfs"
 
 	mb "github.com/onmetal/metalbond"
+	dpdkclient "github.com/onmetal/net-dpservice-go/client"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -179,7 +179,7 @@ func main() {
 	}()
 
 	dpdkProtoClient := dpdkproto.NewDPDKonmetalClient(conn)
-	dpdkClient := dpdk.NewClient(dpdkProtoClient)
+	dpdkClient := dpdkclient.NewClient(dpdkProtoClient)
 
 	var mbClient dpdkmetalbond.MbInternalAccess
 	config := mb.Config{
@@ -205,15 +205,15 @@ func main() {
 		}
 	}
 
-	dpdkUUID, err := dpdkProtoClient.Initialized(context.Background(), &dpdkproto.Empty{})
+	dpdkUUID, err := dpdkProtoClient.CheckInitialized(context.Background(), &dpdkproto.CheckInitializedRequest{})
 	if err != nil {
-		_, err = dpdkProtoClient.Init(context.Background(), &dpdkproto.InitConfig{})
+		_, err = dpdkProtoClient.Initialize(context.Background(), &dpdkproto.InitializeRequest{})
 		if err != nil {
 			setupLog.Error(err, "dp-service can not be initialized")
 			os.Exit(1)
 		}
 
-		dpdkUUID, err = dpdkProtoClient.Initialized(context.Background(), &dpdkproto.Empty{})
+		dpdkUUID, err = dpdkProtoClient.CheckInitialized(context.Background(), &dpdkproto.CheckInitializedRequest{})
 		if err != nil {
 			setupLog.Error(err, "dp-service down")
 			os.Exit(1)
@@ -246,7 +246,7 @@ func main() {
 		Client:        mgr.GetClient(),
 		EventRecorder: mgr.GetEventRecorderFor("networkinterface"),
 		Scheme:        mgr.GetScheme(),
-		DPDK:          dpdk.NewClient(dpdkProtoClient),
+		DPDK:          dpdkclient.NewClient(dpdkProtoClient),
 		Metalbond:     metalbond.NewClient(mbInstance),
 		NetFnsManager: netFnsManager,
 		SysFS:         sysFS,
@@ -260,7 +260,7 @@ func main() {
 	if err = (&controllers.LoadBalancerReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
-		DPDK:       dpdk.NewClient(dpdkProtoClient),
+		DPDK:       dpdkclient.NewClient(dpdkProtoClient),
 		Metalbond:  metalbond.NewClient(mbInstance),
 		NodeName:   nodeName,
 		PublicVNI:  publicVNI,
@@ -272,7 +272,7 @@ func main() {
 	//+kubebuilder:scaffold:builder
 
 	var dpChecker healthz.Checker = func(_ *http.Request) error {
-		uuid, err := dpdkProtoClient.Initialized(context.Background(), &dpdkproto.Empty{})
+		uuid, err := dpdkProtoClient.CheckInitialized(context.Background(), &dpdkproto.CheckInitializedRequest{})
 		if err != nil {
 			return fmt.Errorf("dp-service down: %w", err)
 		}

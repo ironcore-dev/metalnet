@@ -32,9 +32,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/onmetal/controller-utils/clientutils"
 	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
-	"github.com/onmetal/metalnet/dpdk"
 	"github.com/onmetal/metalnet/dpdkmetalbond"
 	"github.com/onmetal/metalnet/metalbond"
+	dpdk "github.com/onmetal/net-dpservice-go/api"
+	dpdkclient "github.com/onmetal/net-dpservice-go/client"
+	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
+	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 )
 
 const (
@@ -47,7 +50,7 @@ type LoadBalancerReconciler struct {
 	record.EventRecorder
 	Scheme *runtime.Scheme
 
-	DPDK       dpdk.Client
+	DPDK       dpdkclient.Client
 	MBInternal dpdkmetalbond.MbInternalAccess
 	Metalbond  metalbond.Client
 	NodeName   string
@@ -94,10 +97,10 @@ func (r *LoadBalancerReconciler) delete(ctx context.Context, log logr.Logger, lb
 	log.V(1).Info("Finalizer present, cleaning up")
 
 	log.V(1).Info("Getting dpdk loadbalancer")
-	dpdkLoadBalancer, err := r.DPDK.GetLoadBalancer(ctx, lb.UID)
+	dpdkLoadBalancer, err := r.DPDK.GetLoadBalancer(ctx, string(lb.UID))
 	ip := lb.Spec.IP.Addr.String()
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.NOT_FOUND) {
+		if !dpdkerrors.IsStatusErrorCode(err, dpdkerrors.NOT_FOUND) {
 			return ctrl.Result{}, fmt.Errorf("error getting dpdk loadbalancer: %w", err)
 		}
 		log.V(1).Info("Remove LoadBalancer server", "ip", ip)
@@ -114,11 +117,11 @@ func (r *LoadBalancerReconciler) delete(ctx context.Context, log logr.Logger, lb
 	}
 
 	vni := dpdkLoadBalancer.Spec.VNI
-	underlayRoute := dpdkLoadBalancer.Status.UnderlayRoute
+	underlayRoute := dpdkLoadBalancer.Spec.UnderlayRoute
 	log.V(1).Info("Got dpdk LoadBalancer", "VNI", vni, "UnderlayRoute", underlayRoute)
 
 	log.V(1).Info("Deleting LoadBalancer")
-	if err := r.deleteLoadBalancer(ctx, log, lb, vni, underlayRoute); err != nil {
+	if err := r.deleteLoadBalancer(ctx, log, lb, vni, *underlayRoute); err != nil {
 		return ctrl.Result{}, fmt.Errorf("error deleting underlay route: %w", err)
 	}
 	log.V(1).Info("Deleted Loadbalancer")
@@ -149,7 +152,7 @@ func (r *LoadBalancerReconciler) deleteLoadBalancer(
 	log.V(1).Info("Removed loadbalancer route if existed")
 
 	log.V(1).Info("Deleting dpdk loadbalancer if exists")
-	if err := r.DPDK.DeleteLoadBalancer(ctx, lb.UID); dpdk.IgnoreStatusErrorCode(err, dpdk.NOT_FOUND) != nil {
+	if _, err := r.DPDK.DeleteLoadBalancer(ctx, string(lb.UID)); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.NOT_FOUND) != nil {
 		return fmt.Errorf("error deleting loadbalancer: %w", err)
 	}
 
@@ -274,29 +277,29 @@ func (r *LoadBalancerReconciler) reconcile(ctx context.Context, log logr.Logger,
 func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr.Logger, lb *metalnetv1alpha1.LoadBalancer, vni uint32) (netip.Addr, error) {
 	log.V(1).Info("Getting dpdk loadbalancer")
 	ip := lb.Spec.IP.Addr.String()
-	lbalancer, err := r.DPDK.GetLoadBalancer(ctx, lb.UID)
+	lbalancer, err := r.DPDK.GetLoadBalancer(ctx, string(lb.UID))
 	if err != nil {
-		if !dpdk.IsStatusErrorCode(err, dpdk.NOT_FOUND) {
+		if !dpdkerrors.IsStatusErrorCode(err, dpdkerrors.NOT_FOUND) {
 			return netip.Addr{}, fmt.Errorf("error getting dpdk loadbalancer: %w", err)
 		}
 
-		var ports []dpdk.DpLoadBalancerPort
+		var ports []dpdk.LBPort
 		for _, LBPort := range lb.Spec.Ports {
-			port := dpdk.DpLoadBalancerPort{
+			port := dpdk.LBPort{
 				Port:     uint32(LBPort.Port),
-				Protocol: LBPort.Protocol,
+				Protocol: uint32(dpdkproto.Protocol_value[LBPort.Protocol]),
 			}
 			ports = append(ports, port)
 		}
 
 		log.V(1).Info("DPDK loadbalancer does not yet exist, creating it")
 
-		lbalancer, err := r.DPDK.CreateLoadBalancer(ctx, &dpdk.DpLoadBalancer{
-			DpLoadBalancerMetadata: dpdk.DpLoadBalancerMetadata{UID: lb.UID},
-			Spec: dpdk.DpLoadBalancerSpec{
-				VNI:                     vni,
-				LoadBalancerIPv4Address: lb.Spec.IP.Addr,
-				Ports:                   ports,
+		lbalancer, err := r.DPDK.CreateLoadBalancer(ctx, &dpdk.LoadBalancer{
+			LoadBalancerMeta: dpdk.LoadBalancerMeta{ID: string(lb.UID)},
+			Spec: dpdk.LoadBalancerSpec{
+				VNI:     vni,
+				LbVipIP: &lb.Spec.IP.Addr,
+				Lbports: ports,
 			},
 		})
 		if err != nil {
@@ -307,11 +310,11 @@ func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr
 			return netip.Addr{}, fmt.Errorf("error adding dpdk loadbalancer to internal cache: %w", err)
 		}
 		log.V(1).Info("Adding loadbalancer route if not exists")
-		if err := r.addLoadBalancerRouteIfNotExists(ctx, lb, lbalancer.Status.UnderlayRoute, vni); err != nil {
+		if err := r.addLoadBalancerRouteIfNotExists(ctx, lb, *lbalancer.Spec.UnderlayRoute, vni); err != nil {
 			return netip.Addr{}, err
 		}
 		log.V(1).Info("Added loadbalancer route if not existed")
-		return lbalancer.Status.UnderlayRoute, nil
+		return *lbalancer.Spec.UnderlayRoute, nil
 	}
 
 	log.V(1).Info("DPDK loadbalancer exists")
@@ -320,11 +323,11 @@ func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr
 		return netip.Addr{}, fmt.Errorf("error adding dpdk loadbalancer to internal cache: %w", err)
 	}
 	log.V(1).Info("Adding loadbalancer route if not exists")
-	if err := r.addLoadBalancerRouteIfNotExists(ctx, lb, lbalancer.Status.UnderlayRoute, vni); err != nil {
+	if err := r.addLoadBalancerRouteIfNotExists(ctx, lb, *lbalancer.Spec.UnderlayRoute, vni); err != nil {
 		return netip.Addr{}, err
 	}
 	log.V(1).Info("Added loadbalancer route if not existed")
-	return lbalancer.Status.UnderlayRoute, nil
+	return *lbalancer.Spec.UnderlayRoute, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -26,7 +26,9 @@ import (
 	"github.com/go-logr/logr"
 	mb "github.com/onmetal/metalbond"
 	mbproto "github.com/onmetal/metalbond/pb"
-	"github.com/onmetal/metalnet/dpdk"
+	dpdk "github.com/onmetal/net-dpservice-go/api"
+	dpdkclient "github.com/onmetal/net-dpservice-go/client"
+	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -46,7 +48,7 @@ type MbInternalAccess interface {
 }
 
 type Client struct {
-	dpdk           dpdk.Client
+	dpdk           dpdkclient.Client
 	config         ClientOptions
 	lbServerMap    map[uint32]map[string]types.UID
 	peeredPrefixes map[uint32]map[uint32][]netip.Prefix
@@ -60,7 +62,7 @@ type ClientOptions struct {
 	PreferredNetwork *net.IPNet
 }
 
-func NewClient(log *logr.Logger, dpdkClient dpdk.Client, opts ClientOptions) (*Client, error) {
+func NewClient(log *logr.Logger, dpdkClient dpdkclient.Client, opts ClientOptions) (*Client, error) {
 	return &Client{
 		dpdk:           dpdkClient,
 		config:         opts,
@@ -165,58 +167,55 @@ func (c *Client) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, 
 			}
 		}
 
-		if _, err := c.dpdk.CreateLBTargetIP(ctx, &dpdk.LBTargetIP{
-			LBTargetIPMetadata: dpdk.LBTargetIPMetadata{
-				UID: c.lbServerMap[uint32(vni)][ip],
+		if _, err := c.dpdk.CreateLoadBalancerTarget(ctx, &dpdk.LoadBalancerTarget{
+			LoadBalancerTargetMeta: dpdk.LoadBalancerTargetMeta{
+				LoadbalancerID: string(c.lbServerMap[uint32(vni)][ip]),
 			},
-			Spec: dpdk.LBTargetIPSpec{
-				Address: hop.TargetAddress,
+			Spec: dpdk.LoadBalancerTargetSpec{
+				TargetIP: &hop.TargetAddress,
 			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ALREADY_EXISTS) != nil {
+		}); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.ALREADY_EXISTS) != nil {
 			return fmt.Errorf("error creating lb target: %w", err)
 		}
 		return nil
 	}
 
 	if hop.Type == mbproto.NextHopType_NAT {
-		if _, err := c.dpdk.CreateNATRoute(ctx, &dpdk.NATRoute{
-			NATRouteMetadata: dpdk.NATRouteMetadata{
-				VNI: uint32(vni),
+		natIP := dest.Prefix.Addr()
+		if _, err := c.dpdk.CreateNeighborNat(ctx, &dpdk.NeighborNat{
+			NeighborNatMeta: dpdk.NeighborNatMeta{
+				NatIP: &natIP,
 			},
-			Spec: dpdk.NATRouteSpec{
-				Prefix: dest.Prefix,
-				NextHop: dpdk.NATRouteNextHop{
-					VNI:     uint32(vni),
-					Address: hop.TargetAddress,
-					MinPort: hop.NATPortRangeFrom,
-					MaxPort: hop.NATPortRangeTo,
-				},
+			Spec: dpdk.NeighborNatSpec{
+				Vni:     uint32(vni),
+				MinPort: uint32(hop.NATPortRangeFrom),
+				MaxPort: uint32(hop.NATPortRangeTo),
 			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.ALREADY_EXISTS) != nil {
+		}); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.ALREADY_EXISTS) != nil {
 			return fmt.Errorf("error nat route: %w", err)
 		}
 		return nil
 	}
 
 	prefix := &dpdkproto.Prefix{
-		PrefixLength: uint32(dest.Prefix.Bits()),
+		Length: uint32(dest.Prefix.Bits()),
 	}
 
-	prefix.IpVersion = dpdkproto.IPVersion_IPv4 //only ipv4 in overlay is supported so far
-	prefix.Address = []byte(dest.Prefix.Addr().String())
+	prefix.Ip.Ipver = dpdkproto.IpVersion_IPV4 //only ipv4 in overlay is supported so far
+	prefix.Ip.Address = []byte(dest.Prefix.Addr().String())
 
 	if _, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
-		RouteMetadata: dpdk.RouteMetadata{
+		RouteMeta: dpdk.RouteMeta{
 			VNI: uint32(vni),
 		},
 		Spec: dpdk.RouteSpec{
-			Prefix: dest.Prefix,
-			NextHop: dpdk.RouteNextHop{
-				VNI:     uint32(destVni),
-				Address: hop.TargetAddress,
+			Prefix: &dest.Prefix,
+			NextHop: &dpdk.RouteNextHop{
+				VNI: uint32(destVni),
+				IP:  &hop.TargetAddress,
 			},
 		},
-	}); dpdk.IgnoreStatusErrorCode(err, dpdk.ROUTE_EXISTS) != nil {
+	}); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.ROUTE_EXISTS) != nil {
 		return fmt.Errorf("error creating route: %w", err)
 	}
 	return nil
@@ -236,54 +235,38 @@ func (c *Client) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destinatio
 		if !ok {
 			return fmt.Errorf("no registered LoadBalancer on this client for vni %d and ip %s", vni, ip)
 		}
-		if err := c.dpdk.DeleteLBTargetIP(ctx, &dpdk.LBTargetIP{
-			LBTargetIPMetadata: dpdk.LBTargetIPMetadata{
-				UID: c.lbServerMap[uint32(vni)][ip],
-			},
-			Spec: dpdk.LBTargetIPSpec{
-				Address: hop.TargetAddress,
-			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.NOT_FOUND) != nil &&
-			dpdk.IgnoreStatusErrorCode(err, dpdk.NO_BACKIP) != nil &&
-			dpdk.IgnoreStatusErrorCode(err, dpdk.NO_LB) != nil {
+		if _, err := c.dpdk.DeleteLoadBalancerTarget(
+			ctx,
+			string(c.lbServerMap[uint32(vni)][ip]),
+			&hop.TargetAddress,
+		); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.NOT_FOUND, dpdkerrors.NO_BACKIP, dpdkerrors.NO_LB) != nil {
 			return fmt.Errorf("error deleting lb target: %w", err)
 		}
 		return nil
 	}
 
 	if hop.Type == mbproto.NextHopType_NAT {
-		if err := c.dpdk.DeleteNATRoute(ctx, &dpdk.NATRoute{
-			NATRouteMetadata: dpdk.NATRouteMetadata{
-				VNI: uint32(vni),
+		natIP := dest.Prefix.Addr()
+		if _, err := c.dpdk.DeleteNeighborNat(ctx, &dpdk.NeighborNat{
+			NeighborNatMeta: dpdk.NeighborNatMeta{
+				NatIP: &natIP,
 			},
-			Spec: dpdk.NATRouteSpec{
-				Prefix: dest.Prefix,
-				NextHop: dpdk.NATRouteNextHop{
-					VNI:     uint32(vni),
-					Address: hop.TargetAddress,
-					MinPort: hop.NATPortRangeFrom,
-					MaxPort: hop.NATPortRangeTo,
-				},
+			Spec: dpdk.NeighborNatSpec{
+				Vni:     uint32(vni),
+				MinPort: uint32(hop.NATPortRangeFrom),
+				MaxPort: uint32(hop.NATPortRangeTo),
 			},
-		}); dpdk.IgnoreStatusErrorCode(err, dpdk.NOT_FOUND) != nil {
+		}); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.NOT_FOUND) != nil {
 			return fmt.Errorf("error deleting nat route: %w", err)
 		}
 		return nil
 	}
 
-	if err := c.dpdk.DeleteRoute(ctx, &dpdk.Route{
-		RouteMetadata: dpdk.RouteMetadata{
-			VNI: uint32(vni),
-		},
-		Spec: dpdk.RouteSpec{
-			Prefix: dest.Prefix,
-			NextHop: dpdk.RouteNextHop{
-				VNI:     uint32(vni),
-				Address: hop.TargetAddress,
-			},
-		},
-	}); dpdk.IgnoreStatusErrorCode(err, dpdk.NO_VNI) != nil &&
-		dpdk.IgnoreStatusErrorCode(err, dpdk.ROUTE_NOT_FOUND) != nil {
+	if _, err := c.dpdk.DeleteRoute(
+		ctx,
+		uint32(vni),
+		&dest.Prefix,
+	); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND) != nil {
 		return fmt.Errorf("error deleting route: %w", err)
 	}
 	return nil
@@ -369,22 +352,10 @@ func (c *Client) CleanupNotPeeredRoutes(vni uint32) error {
 	set, ok := c.peeredVnis[vni]
 
 	// loop over all routes and delete the ones that are not peered
-	for _, route := range routes {
+	for _, route := range routes.Items {
 		// only delete route if it is not the local vni and not peered
 		if route.Spec.NextHop.VNI != vni && (ok && !set.Has(route.Spec.NextHop.VNI)) {
-			if err := c.dpdk.DeleteRoute(ctx, &dpdk.Route{
-				RouteMetadata: dpdk.RouteMetadata{
-					VNI: vni,
-				},
-				Spec: dpdk.RouteSpec{
-					Prefix: route.Spec.Prefix,
-					NextHop: dpdk.RouteNextHop{
-						VNI:     route.Spec.NextHop.VNI,
-						Address: route.Spec.NextHop.Address,
-					},
-				},
-			}); dpdk.IgnoreStatusErrorCode(err, dpdk.NO_VNI) != nil &&
-				dpdk.IgnoreStatusErrorCode(err, dpdk.ROUTE_NOT_FOUND) != nil {
+			if _, err := c.dpdk.DeleteRoute(ctx, vni, route.Spec.Prefix); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND) != nil {
 				return fmt.Errorf("error deleting route: %w", err)
 			}
 		}
