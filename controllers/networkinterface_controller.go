@@ -1122,18 +1122,16 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 
 		log.V(1).Info("Creating dpdk interface")
 
-		var interfaceIps []netip.Addr
-		interfaceIps = append(interfaceIps,
-			getNetworkInterfaceIP(corev1.IPv4Protocol, nic),
-			workaroundRequiredIPv6Address(getNetworkInterfaceIP(corev1.IPv6Protocol, nic)),
-		)
+		primaryIpv4 := getNetworkInterfaceIP(corev1.IPv4Protocol, nic)
+		primaryIpv6 := workaroundRequiredIPv6Address(getNetworkInterfaceIP(corev1.IPv6Protocol, nic))
 
 		iface, err := r.DPDK.CreateInterface(ctx, &dpdk.Interface{
 			InterfaceMeta: dpdk.InterfaceMeta{ID: string(nic.UID)},
 			Spec: dpdk.InterfaceSpec{
 				VNI:    vni,
 				Device: dpdkDevice,
-				IPs:    interfaceIps,
+				IPv4:   &primaryIpv4,
+				IPv6:   &primaryIpv6,
 			},
 		})
 		if err != nil {

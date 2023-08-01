@@ -179,6 +179,7 @@ github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/googleapis/gax-go/v2 v2.0.4/go.mod h1:0Wqv26UfaUD9n4G6kQubkQ+KchISgw+vpHVxEJEs9eg=
 github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5mhpdKc/us6bOk=
+github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
@@ -239,6 +240,8 @@ github.com/onmetal/metalbond v0.3.2 h1:nepZHUJqcDnjFq0LXHjcExXtRwa34P/BOY1i9HDhf
 github.com/onmetal/metalbond v0.3.2/go.mod h1:eAMo2+Ph4nQo1RJSV8813Hoafwpdk8E/uZAHhAXbIkg=
 github.com/onmetal/net-dpservice-go v0.1.16-0.20230731100111-f5cd7849de7d h1:xQc8JApzWjfng5U0/mVY9PJiDAhvK/S7cnSzvkxB7bo=
 github.com/onmetal/net-dpservice-go v0.1.16-0.20230731100111-f5cd7849de7d/go.mod h1:M7dg98Xx54qZqWMCWS5LUra3z0x459Pg4/l3F5He4Jk=
+github.com/onmetal/net-dpservice-go v0.1.16-0.20230731142515-5778654d5f9f h1:f0dt/9D4UsLeFT7mNWC+mxGxk0xzL6QhjEx6mbx7HBs=
+github.com/onmetal/net-dpservice-go v0.1.16-0.20230731142515-5778654d5f9f/go.mod h1:M7dg98Xx54qZqWMCWS5LUra3z0x459Pg4/l3F5He4Jk=
 github.com/onsi/ginkgo/v2 v2.11.0 h1:WgqUCUt/lT6yXoQ8Wef0fsNn5cAuMK7+KT9UFRz2tcU=
 github.com/onsi/ginkgo/v2 v2.11.0/go.mod h1:ZhrRA5XmEE3x3rhlzamx/JJvujdZoJ2uvgI7kR0iZvM=
 github.com/onsi/gomega v1.27.8 h1:gegWiwZjBsf2DgiSbf5hpokZ98JVDMcWkUiigk6/KXc=
