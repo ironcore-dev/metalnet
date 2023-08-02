@@ -183,23 +183,6 @@ func main() {
 	dpdkProtoClient := dpdkproto.NewDPDKonmetalClient(conn)
 	dpdkClient := dpdkclient.NewClient(dpdkProtoClient)
 
-	protoVersion, err := dpdkClient.GetVersion(ctx, &dpdk.Version{
-		TypeMeta: dpdk.TypeMeta{Kind: dpdk.VersionKind},
-		VersionMeta: dpdk.VersionMeta{
-			ClientName:    fmt.Sprintf("metalnet-%s", hostName),
-			ClientVersion: buildVersion,
-		},
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to get proto version")
-	}
-	setupLog.Info("protobuf versions",
-		"dpserviceProtocol", protoVersion.Spec.ServiceProtocol,
-		"dpserviceVersion", protoVersion.Spec.ServiceVersion,
-		"metalnetName", protoVersion.ClientName,
-		"metalnetProtocol", protoVersion.ClientProtocol,
-		"metalnetVersion", protoVersion.ClientVersion)
-
 	var mbClient dpdkmetalbond.MbInternalAccess
 	config := mb.Config{
 		KeepaliveInterval: 3,
@@ -238,6 +221,23 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	protoVersion, err := dpdkClient.GetVersion(ctx, &dpdk.Version{
+		TypeMeta: dpdk.TypeMeta{Kind: dpdk.VersionKind},
+		VersionMeta: dpdk.VersionMeta{
+			ClientName:    fmt.Sprintf("metalnet-%s", hostName),
+			ClientVersion: buildVersion,
+		},
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to get proto version")
+	}
+	setupLog.Info("protobuf versions",
+		"dpserviceProtocol", protoVersion.Spec.ServiceProtocol,
+		"dpserviceVersion", protoVersion.Spec.ServiceVersion,
+		"metalnetName", protoVersion.ClientName,
+		"metalnetProtocol", protoVersion.ClientProtocol,
+		"metalnetVersion", protoVersion.ClientVersion)
 
 	if err := metalnetclient.SetupNetworkInterfaceNetworkRefNameFieldIndexer(context.TODO(), mgr.GetFieldIndexer()); err != nil {
 		setupLog.Error(err, "unable to set up field indexer", "Field", metalnetclient.NetworkInterfaceNetworkRefNameField)
