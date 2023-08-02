@@ -44,6 +44,7 @@ import (
 	"github.com/onmetal/metalnet/sysfs"
 
 	mb "github.com/onmetal/metalbond"
+	dpdk "github.com/onmetal/net-dpservice-go/api"
 	dpdkclient "github.com/onmetal/net-dpservice-go/client"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	log "github.com/sirupsen/logrus"
@@ -60,9 +61,10 @@ import (
 )
 
 var (
-	scheme      = runtime.NewScheme()
-	setupLog    = ctrl.Log.WithName("setup")
-	hostName, _ = os.Hostname()
+	scheme       = runtime.NewScheme()
+	setupLog     = ctrl.Log.WithName("setup")
+	hostName, _  = os.Hostname()
+	buildVersion string
 )
 
 func init() {
@@ -180,6 +182,23 @@ func main() {
 
 	dpdkProtoClient := dpdkproto.NewDPDKonmetalClient(conn)
 	dpdkClient := dpdkclient.NewClient(dpdkProtoClient)
+
+	protoVersion, err := dpdkClient.GetVersion(ctx, &dpdk.Version{
+		TypeMeta: dpdk.TypeMeta{Kind: dpdk.VersionKind},
+		VersionMeta: dpdk.VersionMeta{
+			ClientName:    fmt.Sprintf("metalnet-%s", hostName),
+			ClientVersion: buildVersion,
+		},
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to get proto version")
+	}
+	setupLog.Info("protobuf versions",
+		"dpserviceProtocol", protoVersion.Spec.ServiceProtocol,
+		"dpserviceVersion", protoVersion.Spec.ServiceVersion,
+		"metalnetName", protoVersion.ClientName,
+		"metalnetProtocol", protoVersion.ClientProtocol,
+		"metalnetVersion", protoVersion.ClientVersion)
 
 	var mbClient dpdkmetalbond.MbInternalAccess
 	config := mb.Config{

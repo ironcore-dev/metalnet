@@ -87,7 +87,7 @@ check: generate fmt addlicense lint test ## Lint and run tests.
 
 .PHONY: build
 build: manifests generate fmt addlicense lint ## Build the binary
-	go build -o bin/metalnet ./main.go
+	go build -ldflags "-X main.buildVersion=${shell git describe --tags}'" -o bin/metalnet ./main.go
 
 .PHONY: run
 run-base: generate fmt lint ## Run the binary
