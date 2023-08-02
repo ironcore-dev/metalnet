@@ -29,7 +29,6 @@ import (
 	dpdk "github.com/onmetal/net-dpservice-go/api"
 	dpdkclient "github.com/onmetal/net-dpservice-go/client"
 	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
-	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -196,13 +195,6 @@ func (c *Client) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, 
 		}
 		return nil
 	}
-
-	prefix := &dpdkproto.Prefix{
-		Length: uint32(dest.Prefix.Bits()),
-	}
-
-	prefix.Ip.Ipver = dpdkproto.IpVersion_IPV4 //only ipv4 in overlay is supported so far
-	prefix.Ip.Address = []byte(dest.Prefix.Addr().String())
 
 	if _, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
 		RouteMeta: dpdk.RouteMeta{
