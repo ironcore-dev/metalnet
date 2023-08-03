@@ -186,9 +186,10 @@ func (c *Client) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, 
 				NatIP: &natIP,
 			},
 			Spec: dpdk.NeighborNatSpec{
-				Vni:     uint32(vni),
-				MinPort: uint32(hop.NATPortRangeFrom),
-				MaxPort: uint32(hop.NATPortRangeTo),
+				Vni:           uint32(vni),
+				MinPort:       uint32(hop.NATPortRangeFrom),
+				MaxPort:       uint32(hop.NATPortRangeTo),
+				UnderlayRoute: &hop.TargetAddress,
 			},
 		}); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.ALREADY_EXISTS) != nil {
 			return fmt.Errorf("error nat route: %w", err)
@@ -244,9 +245,10 @@ func (c *Client) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destinatio
 				NatIP: &natIP,
 			},
 			Spec: dpdk.NeighborNatSpec{
-				Vni:     uint32(vni),
-				MinPort: uint32(hop.NATPortRangeFrom),
-				MaxPort: uint32(hop.NATPortRangeTo),
+				Vni:           uint32(vni),
+				MinPort:       uint32(hop.NATPortRangeFrom),
+				MaxPort:       uint32(hop.NATPortRangeTo),
+				UnderlayRoute: &hop.TargetAddress,
 			},
 		}); dpdkerrors.IgnoreStatusErrorCode(err, dpdkerrors.NOT_FOUND) != nil {
 			return fmt.Errorf("error deleting nat route: %w", err)
