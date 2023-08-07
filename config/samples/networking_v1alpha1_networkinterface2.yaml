@@ -7,7 +7,8 @@ metadata:
 spec:
   ipFamilies:
     - "IPv4"
-  ip: 10.0.0.3
+  ips:
+    - 10.0.0.3
   nodeName: fra4-lab-dell-2
   networkRef:
     name: network-sample
