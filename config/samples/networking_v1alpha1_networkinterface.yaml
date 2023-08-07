@@ -7,14 +7,14 @@ spec:
     - "IPv4"
   ips:
     - 10.0.0.2
-  #virtualIP: 194.11.242.11
+  virtualIP: 194.11.242.11
   nodeName: fra4-lab-dell-2
-  # nat:
-  #   ip: 194.11.242.10
-  #   port: 1024
-  #   endPort: 1087
-  # loadBalancerTargets:
-  #   - 194.11.242.110/32
+  nat:
+    ip: 194.11.242.10
+    port: 1024
+    endPort: 1087
+  loadBalancerTargets:
+    - 194.11.242.110/32
   networkRef:
     name: network-sample
   firewallRules:
