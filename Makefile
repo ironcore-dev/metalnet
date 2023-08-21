@@ -78,7 +78,7 @@ check: manifests generate addlicense lint test
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 .PHONY: test
 test: envtest manifests generate fmt checklicense ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -v ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -v ./... -coverprofile cover.out -ginkgo.v -ginkgo.label-filter=$(labels)
 
 .PHONY: check
 check: generate fmt addlicense lint test ## Lint and run tests.
