@@ -38,13 +38,13 @@ import (
 // TODO:	'It' specs should be independent, now they are correct because inner spec run in order (to change it use 'ginkgo --randomize-all')
 //			can be fixed by creating single 'It' or by 'Ordered containers'
 
-var _ = Describe("Network Controller", Label("network"), func() {
+var _ = Describe("Network Controller", Label("network"), Ordered, func() {
 	ctx := SetupContext()
 	ns := SetupTest(ctx)
 
-	Context("When creating a Network", func() {
+	Context("When creating a Network", Ordered, func() {
 		It("should create successfully", func() {
-			fmt.Println("network create")
+			fmt.Println("##### network create")
 			network = &metalnetv1alpha1.Network{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-network",
@@ -80,7 +80,7 @@ var _ = Describe("Network Controller", Label("network"), func() {
 		})
 
 		It("should reconcile successfully", func() {
-			fmt.Println("network reconcile")
+			fmt.Println("##### network reconcile")
 			// Create and initialize network reconciler
 			networkReconcile(ctx, *network)
 
@@ -95,12 +95,12 @@ var _ = Describe("Network Controller", Label("network"), func() {
 		})
 
 		It("should fail when already existing", func() {
-			fmt.Println("network create again")
+			fmt.Println("##### network create again")
 			Expect(k8sClient.Create(ctx, network)).ToNot(Succeed())
 		})
 
 		It("should update successfully", func() {
-			fmt.Println("network update")
+			fmt.Println("##### network update")
 
 			patchNetwork := network.DeepCopy()
 			patchNetwork.Spec.PeeredIDs = []int32{4, 5}
@@ -118,9 +118,9 @@ var _ = Describe("Network Controller", Label("network"), func() {
 		})
 	})
 
-	Context("When deleting a Network", func() {
+	Context("When deleting a Network", Ordered, func() {
 		It("should delete successfully", func() {
-			fmt.Println("network delete")
+			fmt.Println("##### network delete")
 			// Delete the Network object
 			Expect(k8sClient.Delete(ctx, network)).To(Succeed())
 
@@ -137,7 +137,7 @@ var _ = Describe("Network Controller", Label("network"), func() {
 		})
 
 		It("should reconcile successfully after delete", func() {
-			fmt.Println("network reconcile delete")
+			fmt.Println("##### network reconcile delete")
 			// Create and initialize network reconciler
 			networkReconcile(ctx, *network)
 
@@ -160,8 +160,10 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 	ctx := SetupContext()
 	ns := SetupTest(ctx)
 
-	BeforeEach(func() {
-		fmt.Println("beforeeach network create")
+	// Creates the k8s network object and runs the reconcile loop before spec
+	// OncePerOrdered decorator will run this only once per Ordered spec and not before every It spec
+	BeforeEach(OncePerOrdered, func() {
+		fmt.Println("##### beforeeach network create", ns.Name)
 		network = &metalnetv1alpha1.Network{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-network",
@@ -182,52 +184,55 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 
 		networkReconcile(ctx, *network)
 
-		DeferCleanup(func() {
-			fmt.Println("defer network delete")
+		// Deletes the k8s network object after spec is completed
+		DeferCleanup(func(ctx SpecContext) {
+			fmt.Println("##### defer network delete")
 			Expect(k8sClient.Delete(ctx, network)).To(Succeed())
+			networkReconcile(ctx, *network)
 		})
 	})
 
-	Context("When creating a NetworkInterface", func() {
-		It("should create successfully", Label("interface"), func() {
-			fmt.Println("int create")
-			// Define a new NetworkInterface object
-			networkInterface = &metalnetv1alpha1.NetworkInterface{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-network-interface",
-					Namespace: ns.Name,
-				},
-				Spec: metalnetv1alpha1.NetworkInterfaceSpec{
-					NetworkRef: corev1.LocalObjectReference{
-						Name: "test-network",
+	Context("NetworkInterface", Label("interface"), Ordered, func() {
+		When("creating a NetworkInterface", Ordered, func() {
+			It("should create successfully", func() {
+				fmt.Println("##### int create", ns.Name)
+				// Define a new NetworkInterface object
+				networkInterface = &metalnetv1alpha1.NetworkInterface{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-network-interface",
+						Namespace: ns.Name,
 					},
-					NodeName:   &testNode,
-					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
-					IPs: []metalnetv1alpha1.IP{
-						{
-							Addr: netip.MustParseAddr("10.0.0.1"),
+					Spec: metalnetv1alpha1.NetworkInterfaceSpec{
+						NetworkRef: corev1.LocalObjectReference{
+							Name: "test-network",
+						},
+						NodeName:   &testNode,
+						IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+						IPs: []metalnetv1alpha1.IP{
+							{
+								Addr: netip.MustParseAddr("10.0.0.1"),
+							},
 						},
 					},
-				},
-			}
+				}
 
-			// Create the NetworkInterface object
-			Expect(k8sClient.Create(ctx, networkInterface)).To(Succeed())
+				// Create the NetworkInterface object
+				Expect(k8sClient.Create(ctx, networkInterface)).To(Succeed())
 
-			// Ensure it's created
-			createdNetworkInterface := &metalnetv1alpha1.NetworkInterface{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{
-				Namespace: ns.Name,
-				Name:      "test-network-interface",
-			}, createdNetworkInterface)).To(Succeed())
+				// Ensure it's created
+				createdNetworkInterface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: ns.Name,
+					Name:      "test-network-interface",
+				}, createdNetworkInterface)).To(Succeed())
 
-			Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("test-network"))
-			Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.1"))
-			//Expect(createdNetworkInterface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
-		})
-		/*
-			It("should reconcile successfully", func() {
-				fmt.Println("int reconcile")
+				Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("test-network"))
+				Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.1"))
+				//Expect(createdNetworkInterface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+
+			It("should reconcile successfully", Pending, func() {
+				fmt.Println("##### int reconcile")
 
 				// Create and initialize Network Interface reconciler
 				reconciler := &NetworkInterfaceReconciler{
@@ -271,159 +276,157 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vniAvail.Spec.InUse).To(BeTrue())
 				// Another reconcilition of network object is needed here. Because we dont have event watches in the test environment.
-			})*/
+			})
+		})
 	})
 
-	Context("When creating a Loadbalancer", Label("lb"), func() {
-		It("should create successfully", func() {
-			fmt.Println("lb create")
-			// Defining and Creating Network is done in BeforeEach()
+	Context("Loadbalancer", Label("lb"), Ordered, func() {
+		When("creating a Loadbalancer", func() {
+			It("should create successfully", func() {
+				fmt.Println("##### lb create", ns.Name)
+				// Defining and Creating Network is done in BeforeEach()
 
-			// Define a new Loadbalancer object
-			loadBalancer = &metalnetv1alpha1.LoadBalancer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-loadbalancer",
+				// Define a new Loadbalancer object
+				loadBalancer = &metalnetv1alpha1.LoadBalancer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-loadbalancer",
+						Namespace: ns.Name,
+					},
+					Spec: metalnetv1alpha1.LoadBalancerSpec{
+						NetworkRef: corev1.LocalObjectReference{Name: "test-network"},
+						LBtype:     "Public",
+						IPFamily:   corev1.IPv4Protocol,
+						IP: metalnetv1alpha1.IP{
+							Addr: netip.MustParseAddr("11.5.5.1"),
+						},
+						Ports: []metalnetv1alpha1.LBPort{
+							{Protocol: "TCP", Port: 80},
+							{Protocol: "UDP", Port: 80},
+						},
+						NodeName: &testNode,
+					},
+				}
+
+				// Create the LoadBalancer object in k8s
+				Expect(k8sClient.Create(ctx, loadBalancer)).To(Succeed())
+
+				// Ensure it's created
+				createdLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
 					Namespace: ns.Name,
-				},
-				Spec: metalnetv1alpha1.LoadBalancerSpec{
-					NetworkRef: corev1.LocalObjectReference{Name: "test-network"},
-					LBtype:     "Public",
-					IPFamily:   corev1.IPv4Protocol,
-					IP: metalnetv1alpha1.IP{
-						Addr: netip.MustParseAddr("11.5.5.1"),
-					},
-					Ports: []metalnetv1alpha1.LBPort{
-						{Protocol: "TCP", Port: 80},
-						{Protocol: "UDP", Port: 80},
-					},
-					NodeName: &testNode,
-				},
-			}
+					Name:      "test-loadbalancer",
+				}, createdLB)).To(Succeed())
 
-			// Create the LoadBalancer object in k8s
-			Expect(k8sClient.Create(ctx, loadBalancer)).To(Succeed())
+				// requested LB and created LB should match
+				Expect(createdLB).To(Equal(loadBalancer))
 
-			// Ensure it's created
-			createdLB := &metalnetv1alpha1.LoadBalancer{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{
-				Namespace: ns.Name,
-				Name:      "test-loadbalancer",
-			}, createdLB)).To(Succeed())
+				// Finalizers should not yet be created
+				Expect(createdLB.GetFinalizers()).To(BeNil())
 
-			// requested LB and created LB should match
-			Expect(createdLB).To(Equal(loadBalancer))
+				// LB should not yet be created in dpservice
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).To(HaveOccurred())
+			})
 
-			// Finalizers should not yet be created
-			Expect(createdLB.GetFinalizers()).To(BeNil())
+			It("should fail when already existing", func() {
+				fmt.Println("##### lb create again", ns.Name)
+				Expect(k8sClient.Create(ctx, loadBalancer)).ToNot(Succeed())
+			})
 
-			// LB should not yet be created in dpservice
-			_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
-			Expect(err).To(HaveOccurred())
+			It("should reconcile successfully", func() {
+				fmt.Println("##### lb reconcile", ns.Name)
+				// Create and initialize loadbalancer reconciler
+				lbReconcile(ctx, *loadBalancer)
+
+				// Fetch the updated LB object from k8s
+				fetchedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      loadBalancer.Name,
+					Namespace: loadBalancer.Namespace,
+				}, fetchedLB)).To(Succeed())
+
+				Expect(fetchedLB.GetFinalizers()).ToNot(BeZero())
+				Expect(fetchedLB.Status.State).To(Equal(metalnetv1alpha1.LoadBalancerStateReady))
+
+				// Fetch the LB object from dpservice
+				dpdkLB, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).ToNot(HaveOccurred())
+
+				// LB parameters in k8s and dpservice should match
+				Expect(fetchedLB.Spec.IP.As4()).To(Equal(dpdkLB.Spec.LbVipIP.As4()))
+				Expect(fetchedLB.Spec.Ports[0].Port).To(Equal(int32(dpdkLB.Spec.Lbports[0].Port)))
+
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeTrue())
+				// Another reconcilition of network object is needed here. Because we dont have event watches in the test environment.
+			})
+
+			It("should update successfully", func() {
+				fmt.Println("##### lb update", ns.Name)
+				patchLB := loadBalancer.DeepCopy()
+				patchLB.Spec.IP = metalnetv1alpha1.IP{
+					Addr: netip.MustParseAddr("11.5.5.2"),
+				}
+				Expect(k8sClient.Patch(ctx, patchLB, client.MergeFrom(loadBalancer))).To(Succeed())
+
+				lbReconcile(ctx, *loadBalancer)
+
+				updatedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      loadBalancer.Name,
+					Namespace: loadBalancer.Namespace,
+				}, updatedLB)).To(Succeed())
+
+				Expect(updatedLB.Spec.IP.Addr.String()).To(Equal("11.5.5.2"))
+			})
 		})
 
-		It("should fail when already existing", func() {
-			fmt.Println("lb create again")
-			Expect(k8sClient.Create(ctx, loadBalancer)).ToNot(Succeed())
-		})
+		When("deleting a Loadbalancer", Label("lb"), Ordered, func() {
+			It("should delete successfully", func() {
+				fmt.Println("##### lb delete", ns.Name)
+				// Delete the Loadbalancer object from k8s
+				Expect(k8sClient.Delete(ctx, loadBalancer)).To(Succeed())
 
-		It("should reconcile successfully", func() {
-			fmt.Println("lb reconcile")
-			// Create and initialize loadbalancer reconciler
-			lbReconcile(ctx, *loadBalancer)
+				// Ensure it's deleted
+				deletedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: ns.Name,
+					Name:      loadBalancer.Name,
+				}, deletedLB)).ToNot(Succeed())
 
-			// Fetch the updated LB object from k8s
-			fetchedLB := &metalnetv1alpha1.LoadBalancer{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{
-				Name:      loadBalancer.Name,
-				Namespace: loadBalancer.Namespace,
-			}, fetchedLB)).To(Succeed())
+				// LB should still be in dpservice
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).ToNot(HaveOccurred())
 
-			Expect(fetchedLB.GetFinalizers()).ToNot(BeZero())
-			Expect(fetchedLB.Status.State).To(Equal(metalnetv1alpha1.LoadBalancerStateReady))
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeTrue())
+			})
 
-			// Fetch the LB object from dpservice
-			dpdkLB, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
-			Expect(err).ToNot(HaveOccurred())
+			It("should reconcile successfully after delete", func() {
+				fmt.Println("##### lb rec delete", ns.Name)
+				// Create and initialize loadbalancer reconciler
+				lbReconcile(ctx, *loadBalancer)
 
-			// LB parameters in k8s and dpservice should match
-			Expect(fetchedLB.Spec.IP.As4()).To(Equal(dpdkLB.Spec.LbVipIP.As4()))
-			Expect(fetchedLB.Spec.Ports[0].Port).To(Equal(int32(dpdkLB.Spec.Lbports[0].Port)))
+				// Fetch the deleted LB object from k8s
+				fetchedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      loadBalancer.Name,
+					Namespace: loadBalancer.Namespace,
+				}, fetchedLB)).ToNot(Succeed())
 
-			// Fetch the VNI object from dpservice
-			vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vniAvail.Spec.InUse).To(BeTrue())
-			// Another reconcilition of network object is needed here. Because we dont have event watches in the test environment.
-		})
+				// Fetch the deleted LB object from dpservice
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).To(HaveOccurred())
 
-		It("should update successfully", func() {
-			fmt.Println("lb update")
-			patchLB := loadBalancer.DeepCopy()
-			patchLB.Spec.IP = metalnetv1alpha1.IP{
-				Addr: netip.MustParseAddr("11.5.5.2"),
-			}
-			Expect(k8sClient.Patch(ctx, patchLB, client.MergeFrom(loadBalancer))).To(Succeed())
-
-			fmt.Println("patchLB", patchLB.Spec.IP)
-			fmt.Println("updateLB", loadBalancer.Spec.IP)
-
-			lbReconcile(ctx, *loadBalancer)
-
-			updatedLB := &metalnetv1alpha1.LoadBalancer{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{
-				Name:      loadBalancer.Name,
-				Namespace: loadBalancer.Namespace,
-			}, updatedLB)).To(Succeed())
-
-			fmt.Println("updatedLB", updatedLB.Spec.IP)
-
-			Expect(updatedLB.Spec.IP.Addr.String()).To(Equal("11.5.5.2"))
-		})
-	})
-
-	Context("When deleting a Loadbalancer", Label("lb"), func() {
-		It("should delete successfully", func() {
-			fmt.Println("lb delete")
-			// Delete the Loadbalancer object from k8s
-			Expect(k8sClient.Delete(ctx, loadBalancer)).To(Succeed())
-
-			// Ensure it's deleted
-			deletedLB := &metalnetv1alpha1.LoadBalancer{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{
-				Namespace: ns.Name,
-				Name:      loadBalancer.Name,
-			}, deletedLB)).ToNot(Succeed())
-
-			// LB should still be in dpservice
-			_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
-			Expect(err).ToNot(HaveOccurred())
-
-			// Fetch the VNI object from dpservice
-			vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vniAvail.Spec.InUse).To(BeTrue())
-		})
-
-		It("should reconcile successfully after delete", func() {
-			fmt.Println("lb rec delete")
-			// Create and initialize loadbalancer reconciler
-			lbReconcile(ctx, *loadBalancer)
-
-			// Fetch the deleted LB object from k8s
-			fetchedLB := &metalnetv1alpha1.LoadBalancer{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{
-				Name:      loadBalancer.Name,
-				Namespace: loadBalancer.Namespace,
-			}, fetchedLB)).ToNot(Succeed())
-
-			// Fetch the deleted LB object from dpservice
-			_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
-			Expect(err).To(HaveOccurred())
-
-			// Fetch the VNI object from dpservice
-			vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(vniAvail.Spec.InUse).To(BeFalse())
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeFalse())
+			})
 		})
 	})
 })
