@@ -139,7 +139,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	claimStore, err := netfns.NewFileClaimStore(filepath.Join(metalnetDir, "netfns", "claims"))
+	claimStore, err := netfns.NewFileClaimStore(filepath.Join(metalnetDir, "netfns", "claims"), false)
 	if err != nil {
 		setupLog.Error(err, "unable to create claim store")
 		os.Exit(1)

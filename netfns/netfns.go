@@ -49,14 +49,15 @@ type ClaimStore interface {
 }
 
 type fileClaimStore struct {
-	rootDir string
+	rootDir    string
+	isTAPStore bool
 }
 
-func NewFileClaimStore(rootDir string) (ClaimStore, error) {
+func NewFileClaimStore(rootDir string, isTAPStore bool) (ClaimStore, error) {
 	if err := os.MkdirAll(rootDir, perm); err != nil {
 		return nil, fmt.Errorf("error creating directory at %s: %w", rootDir, err)
 	}
-	return &fileClaimStore{rootDir}, nil
+	return &fileClaimStore{rootDir, isTAPStore}, nil
 }
 
 func (s *fileClaimStore) claimFile(uid types.UID) string {
@@ -86,7 +87,14 @@ func (s *fileClaimStore) Get(uid types.UID) (*ghw.PCIAddress, error) {
 		return nil, ErrClaimNotFound
 	}
 
-	addr := ghw.PCIAddressFromString(string(data))
+	var addr *ghw.PCIAddress
+	if !s.isTAPStore {
+		addr = ghw.PCIAddressFromString(string(data))
+	} else {
+		addr = &ghw.PCIAddress{
+			Device: string(data),
+		}
+	}
 	if addr == nil {
 		return nil, fmt.Errorf("invalid pci address %q", string(data))
 	}
@@ -239,6 +247,19 @@ func CollectVirtualFunctions(fs sysfs.FS) ([]ghw.PCIAddress, error) {
 
 			addresses = append(addresses, *virtFnAddr)
 		}
+	}
+	return addresses, nil
+}
+
+func CollectTAPFunctions(devices []string) ([]ghw.PCIAddress, error) {
+	var addresses []ghw.PCIAddress
+
+	// Fill the addresses array
+	for _, device := range devices {
+		addr := ghw.PCIAddress{
+			Device: device,
+		}
+		addresses = append(addresses, addr)
 	}
 	return addresses, nil
 }

@@ -39,6 +39,7 @@ import (
 	networkingv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
 	"github.com/onmetal/metalnet/dpdkmetalbond"
 	"github.com/onmetal/metalnet/metalbond"
+	"github.com/onmetal/metalnet/netfns"
 	dpdkclient "github.com/onmetal/net-dpservice-go/client"
 	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	//+kubebuilder:scaffold:imports
@@ -56,6 +57,8 @@ var (
 	ctxGrpc         context.Context
 	dpserviceAddr   string = "127.0.0.1:1337"
 	testNode        string = "testNode"
+	metalnetDir     string = "/var/lib/metalnet"
+	netFnsManager   *netfns.Manager
 	conn            *grpc.ClientConn
 	dpdkProtoClient dpdkproto.DPDKonmetalClient
 	dpdkClient      dpdkclient.Client
@@ -95,6 +98,16 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	// Setup TAP File claim store
+	claimStore, err := netfns.NewFileClaimStore(filepath.Join(metalnetDir, "netfns", "claims"), true)
+	Expect(err).NotTo(HaveOccurred())
+
+	initAvailable, err := netfns.CollectTAPFunctions([]string{"net_tap2", "net_tap3", "net_tap4", "net_tap5"})
+	Expect(err).NotTo(HaveOccurred())
+
+	netFnsManager, err = netfns.NewManager(claimStore, initAvailable)
+	Expect(err).NotTo(HaveOccurred())
 
 	// setup net-dpservice client
 	ctxGrpc, ctxCancel = context.WithTimeout(context.Background(), 100*time.Millisecond)

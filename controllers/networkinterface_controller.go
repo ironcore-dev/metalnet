@@ -24,6 +24,7 @@ import (
 	"net/netip"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/jaypipes/ghw"
@@ -1195,6 +1196,9 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 }
 
 func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (string, error) {
+	if strings.Contains(addr.Device, "tap") {
+		return addr.Device, nil
+	}
 	pciFunction, err := strconv.ParseUint(addr.Function, 8, 64)
 	if err != nil {
 		return "", fmt.Errorf("error parsing address function %s: %w", addr.Function, err)

@@ -228,10 +228,9 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 
 				Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("test-network"))
 				Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.1"))
-				//Expect(createdNetworkInterface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 			})
 
-			It("should reconcile successfully", Pending, func() {
+			It("should reconcile successfully", func() {
 				fmt.Println("##### int reconcile")
 
 				// Create and initialize Network Interface reconciler
@@ -241,6 +240,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 					DPDK:          dpdkClient,
 					Metalbond:     metalbondClient,
 					NodeName:      testNode,
+					NetFnsManager: netFnsManager,
 					PublicVNI:     100,
 				}
 
@@ -265,7 +265,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 					Name:      networkInterface.Name,
 					Namespace: networkInterface.Namespace,
 				}, fetchedIface)).To(Succeed())
-				//Expect(fetchedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+				Expect(fetchedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 
 				// Fetch the Iface object from dpservice
 				_, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
@@ -275,7 +275,22 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vniAvail.Spec.InUse).To(BeTrue())
-				// Another reconcilition of network object is needed here. Because we dont have event watches in the test environment.
+
+				Expect(k8sClient.Delete(ctx, fetchedIface)).To(Succeed())
+				// Loop the reconciler until Requeue is false
+				for {
+					res, err := reconciler.Reconcile(ctx, ctrl.Request{
+						NamespacedName: types.NamespacedName{
+							Name:      networkInterface.Name,
+							Namespace: networkInterface.Namespace,
+						},
+					})
+					Expect(err).ToNot(HaveOccurred())
+
+					if res.Requeue == false {
+						break
+					}
+				}
 			})
 		})
 	})
