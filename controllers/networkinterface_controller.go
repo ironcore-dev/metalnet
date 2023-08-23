@@ -54,6 +54,8 @@ import (
 
 const (
 	networkInterfaceFinalizer = "networking.metalnet.onmetal.de/networkInterface"
+	defaultFirewallRulePrio   = 100
+	defaultFirewallRulePrefix = "0.0.0.0/0"
 )
 
 // workaroundNoNetworkInterfaceIPV6 is a workaround to only use ipv4 addresses.
@@ -333,7 +335,13 @@ func (r *NetworkInterfaceReconciler) fillTCPUDPFilter(ctx context.Context, specF
 }
 
 func (r *NetworkInterfaceReconciler) createDPDKFwRule(ctx context.Context, nic *metalnetv1alpha1.NetworkInterface, specFirewallRule *metalnetv1alpha1.FirewallRuleSpec) error {
-	var protocolFilter dpdkproto.ProtocolFilter
+	var (
+		protocolFilter dpdkproto.ProtocolFilter
+		priority       uint32 = defaultFirewallRulePrio
+		sourcePrefix   metalnetv1alpha1.IPPrefix
+		destPrefix     metalnetv1alpha1.IPPrefix
+	)
+
 	switch *specFirewallRule.ProtocolMatch.ProtocolType {
 	case metalnetv1alpha1.FirewallRuleProtocolTypeICMP:
 		var icmpType, icmpCode int32
@@ -363,6 +371,22 @@ func (r *NetworkInterfaceReconciler) createDPDKFwRule(ctx context.Context, nic *
 		protocolFilter.Filter = nil
 	}
 
+	if specFirewallRule.Priority != nil {
+		priority = uint32(*specFirewallRule.Priority)
+	}
+
+	if specFirewallRule.SourcePrefix == nil {
+		sourcePrefix.Prefix = netip.MustParsePrefix(defaultFirewallRulePrefix)
+	} else {
+		sourcePrefix.Prefix = specFirewallRule.SourcePrefix.Prefix
+	}
+
+	if specFirewallRule.DestinationPrefix == nil {
+		destPrefix.Prefix = netip.MustParsePrefix(defaultFirewallRulePrefix)
+	} else {
+		destPrefix.Prefix = specFirewallRule.DestinationPrefix.Prefix
+	}
+
 	fwrule, err := r.DPDK.CreateFirewallRule(ctx, &dpdk.FirewallRule{
 		TypeMeta: dpdk.TypeMeta{Kind: dpdk.FirewallRuleKind},
 		FirewallRuleMeta: dpdk.FirewallRuleMeta{
@@ -372,9 +396,9 @@ func (r *NetworkInterfaceReconciler) createDPDKFwRule(ctx context.Context, nic *
 			RuleID:            string(specFirewallRule.FirewallRuleID),
 			TrafficDirection:  specFirewallRule.Direction,
 			FirewallAction:    specFirewallRule.Action,
-			Priority:          uint32(specFirewallRule.Priority),
-			SourcePrefix:      &specFirewallRule.SourcePrefix.Prefix,
-			DestinationPrefix: &specFirewallRule.DestinationPrefix.Prefix,
+			Priority:          priority,
+			SourcePrefix:      &sourcePrefix.Prefix,
+			DestinationPrefix: &destPrefix.Prefix,
 			ProtocolFilter: &dpdkproto.ProtocolFilter{
 				Filter: protocolFilter.Filter},
 		},

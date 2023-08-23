@@ -91,10 +91,10 @@ type FirewallRuleSpec struct {
 	FirewallRuleID    types.UID       `json:"firewallRuleID"`
 	Direction         string          `json:"direction"`
 	Action            string          `json:"action"`
-	Priority          int32           `json:"priority,omitempty"`
+	Priority          *int32          `json:"priority,omitempty"`
 	IpFamily          corev1.IPFamily `json:"ipFamily"`
-	SourcePrefix      IPPrefix        `json:"sourcePrefix,omitempty"`
-	DestinationPrefix IPPrefix        `json:"destinationPrefix,omitempty"`
+	SourcePrefix      *IPPrefix       `json:"sourcePrefix,omitempty"`
+	DestinationPrefix *IPPrefix       `json:"destinationPrefix,omitempty"`
 	ProtocolMatch     *ProtocolMatch  `json:"protocolMatch,omitempty"`
 }
 

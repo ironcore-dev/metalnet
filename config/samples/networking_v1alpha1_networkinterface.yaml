@@ -22,7 +22,6 @@ spec:
       firewallRuleID: "fr1"
       direction: "INGRESS"
       action: "ACCEPT"
-      priority: 100
       ipFamily: "IPv4"
       sourcePrefix: "0.0.0.0/0"
       protocolMatch:
@@ -30,3 +29,13 @@ spec:
         portRange:
           srcPort: 80
           endSrcPort: 80
+    -
+      firewallRuleID: "fr2"
+      direction: "EGRESS"
+      action: "ACCEPT"
+      ipFamily: "IPv4"
+      protocolMatch:
+        protocolType: "UDP"
+        portRange:
+          srcPort: 2000
+          endSrcPort: 2400
