@@ -827,8 +827,14 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 		if virtualIPErr != nil {
 			nic.Status.VirtualIP = nic.Spec.VirtualIP
 		}
-		if natIPErr != nil {
-			nic.Status.NatIP = nic.Spec.NAT.IP
+		if natIPErr == nil {
+			if nic.Spec.NAT != nil {
+				nic.Status.NatIP = nic.Spec.NAT
+			} else {
+				nic.Status.NatIP = nil
+			}
+		} else {
+			nic.Status.NatIP = nil
 		}
 		if prefixesErr != nil {
 			nic.Status.Prefixes = nic.Spec.Prefixes

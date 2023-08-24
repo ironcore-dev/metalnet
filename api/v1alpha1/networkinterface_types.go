@@ -53,8 +53,8 @@ type NetworkInterfaceStatus struct {
 	// VirtualIP is any virtual ip assigned to the NetworkInterface.
 	VirtualIP *IP `json:"virtualIP,omitempty"`
 
-	// NatIP is any nat ip assigned to the NetworkInterface.
-	NatIP *IP `json:"natIP,omitempty"`
+	// NatIP is detailed information about the NAT on this interface
+	NatIP *NATDetails `json:"natIP,omitempty"`
 
 	// Prefixes are the Prefixes reserved for this NetworkInterface
 	Prefixes []IPPrefix `json:"prefixes,omitempty"`

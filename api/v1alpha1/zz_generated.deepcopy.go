@@ -396,7 +396,8 @@ func (in *NetworkInterfaceStatus) DeepCopyInto(out *NetworkInterfaceStatus) {
 	}
 	if in.NatIP != nil {
 		in, out := &in.NatIP, &out.NatIP
-		*out = (*in).DeepCopy()
+		*out = new(NATDetails)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Prefixes != nil {
 		in, out := &in.Prefixes, &out.Prefixes

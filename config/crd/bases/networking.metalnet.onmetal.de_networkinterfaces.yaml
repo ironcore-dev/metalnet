@@ -209,8 +209,21 @@ spec:
                   type: string
                 type: array
               natIP:
-                description: NatIP is any nat ip assigned to the NetworkInterface.
-                type: string
+                description: NatIP is detailed information about the NAT on this interface
+                properties:
+                  endPort:
+                    format: int32
+                    type: integer
+                  ip:
+                    type: string
+                  port:
+                    format: int32
+                    type: integer
+                required:
+                - endPort
+                - ip
+                - port
+                type: object
               pciAddress:
                 description: PCIAddress is a PCI address.
                 properties:
