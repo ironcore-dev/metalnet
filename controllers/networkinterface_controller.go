@@ -686,7 +686,7 @@ func (r *NetworkInterfaceReconciler) deleteExistingVirtualIP(ctx context.Context
 	if err := r.removeVirtualIPRouteIfExists(ctx, virtualIP, underlayRoute); err != nil {
 		return err
 	}
-	log.V(1).Info("Removed virtual ip route fi existed")
+	log.V(1).Info("Removed virtual ip route if existed")
 
 	log.V(1).Info("Deleting dpdk virtual ip if exists")
 	if err := r.deleteDPDKVirtualIPIfExists(ctx, nic); err != nil {

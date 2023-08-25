@@ -193,9 +193,8 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 	})
 
 	Context("NetworkInterface", Label("interface"), Ordered, func() {
-		When("creating a NetworkInterface", Ordered, func() {
+		When("creating a NetworkInterface", func() {
 			It("should create successfully", func() {
-				fmt.Println("##### int create", ns.Name)
 				// Define a new NetworkInterface object
 				networkInterface = &metalnetv1alpha1.NetworkInterface{
 					ObjectMeta: metav1.ObjectMeta{
@@ -230,35 +229,12 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.1"))
 			})
 
+			It("should fail when already existing", func() {
+				Expect(k8sClient.Create(ctx, networkInterface)).ToNot(Succeed())
+			})
+
 			It("should reconcile successfully", func() {
-				fmt.Println("##### int reconcile")
-
-				// Create and initialize Network Interface reconciler
-				reconciler := &NetworkInterfaceReconciler{
-					Client:        k8sClient,
-					EventRecorder: &record.FakeRecorder{},
-					DPDK:          dpdkClient,
-					Metalbond:     metalbondClient,
-					NodeName:      testNode,
-					NetFnsManager: netFnsManager,
-					PublicVNI:     100,
-				}
-
-				// Loop the reconciler until Requeue is false
-				for {
-					res, err := reconciler.Reconcile(ctx, ctrl.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      networkInterface.Name,
-							Namespace: networkInterface.Namespace,
-						},
-					})
-					Expect(err).ToNot(HaveOccurred())
-
-					if res.Requeue == false {
-						break
-					}
-				}
-
+				ifaceReconcile(ctx, *networkInterface)
 				// Fetch the updated Iface object from k8s
 				fetchedIface := &metalnetv1alpha1.NetworkInterface{}
 				Expect(k8sClient.Get(ctx, client.ObjectKey{
@@ -275,22 +251,303 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vniAvail.Spec.InUse).To(BeTrue())
+			})
+		})
 
-				Expect(k8sClient.Delete(ctx, fetchedIface)).To(Succeed())
-				// Loop the reconciler until Requeue is false
-				for {
-					res, err := reconciler.Reconcile(ctx, ctrl.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      networkInterface.Name,
-							Namespace: networkInterface.Namespace,
-						},
-					})
-					Expect(err).ToNot(HaveOccurred())
-
-					if res.Requeue == false {
-						break
-					}
+		When("updating a NetworkInterface", func() {
+			It("IP should update successfully", func() {
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.IPs = []metalnetv1alpha1.IP{
+					{
+						Addr: netip.MustParseAddr("10.0.0.2"),
+					},
 				}
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+
+				ifaceReconcile(ctx, *networkInterface)
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.2"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+
+			It("VIP should add/update/delete successfully", func() {
+				By("adding the VIP")
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.VirtualIP = &metalnetv1alpha1.IP{Addr: netip.MustParseAddr("10.10.10.10")}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+
+				ifaceReconcile(ctx, *networkInterface)
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.VirtualIP.Addr.String()).To(Equal("10.10.10.10"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("updating the VIP")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.VirtualIP = &metalnetv1alpha1.IP{Addr: netip.MustParseAddr("10.10.10.20")}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.VirtualIP.Addr.String()).To(Equal("10.10.10.20"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("deleting the VIP")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.VirtualIP = nil
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.VirtualIP).To(BeNil())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+
+			It("NAT should add/update/delete successfully", func() {
+				By("adding the NAT")
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.NAT = &metalnetv1alpha1.NATDetails{
+					IP:      &metalnetv1alpha1.IP{Addr: netip.MustParseAddr("20.20.20.20")},
+					Port:    1000,
+					EndPort: 2000,
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+
+				ifaceReconcile(ctx, *networkInterface)
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.NAT.IP.Addr.String()).To(Equal("20.20.20.20"))
+				Expect(updatedIface.Spec.NAT.Port).To(Equal(int32(1000)))
+				Expect(updatedIface.Spec.NAT.EndPort).To(Equal(int32(2000)))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("updating the NAT")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.NAT = &metalnetv1alpha1.NATDetails{
+					IP:      &metalnetv1alpha1.IP{Addr: netip.MustParseAddr("30.30.30.30")},
+					Port:    3000,
+					EndPort: 4000,
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.NAT.IP.Addr.String()).To(Equal("30.30.30.30"))
+				Expect(updatedIface.Spec.NAT.Port).To(Equal(int32(3000)))
+				Expect(updatedIface.Spec.NAT.EndPort).To(Equal(int32(4000)))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("deleting the NAT")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.NAT = nil
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.NAT).To(BeNil())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+
+			It("Prefixes should add/update/delete successfully", func() {
+				By("adding the Prefix")
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.0.0.0/24"),
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+
+				ifaceReconcile(ctx, *networkInterface)
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.Prefixes).ToNot(BeEmpty())
+				Expect(updatedIface.Spec.Prefixes[0].String()).To(Equal("10.0.0.0/24"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("updating the Prefix")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.1.1.0/24"),
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.Prefixes).ToNot(BeEmpty())
+				Expect(updatedIface.Spec.Prefixes[0].String()).To(Equal("10.1.1.0/24"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("deleting the Prefix")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.Prefixes).To(BeEmpty())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+
+			It("LoadBalancerTargets should add/update/delete successfully", func() {
+				By("adding the LoadBalancerTarget")
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.LoadBalancerTargets = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.0.0.0/24"),
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+
+				ifaceReconcile(ctx, *networkInterface)
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.LoadBalancerTargets).ToNot(BeEmpty())
+				Expect(updatedIface.Spec.LoadBalancerTargets[0].String()).To(Equal("10.0.0.0/24"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("updating the LoadBalancerTarget")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.LoadBalancerTargets = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.1.1.0/24"),
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.LoadBalancerTargets).ToNot(BeEmpty())
+				Expect(updatedIface.Spec.LoadBalancerTargets[0].String()).To(Equal("10.1.1.0/24"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("deleting the LoadBalancerTarget")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.LoadBalancerTargets = []metalnetv1alpha1.IPPrefix{}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				ifaceReconcile(ctx, *updatedIface)
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.LoadBalancerTargets).To(BeEmpty())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+		})
+
+		When("deleting a NetworkInterface", func() {
+			It("should delete successfully", func() {
+				fmt.Println("##### int delete", ns.Name)
+				// Delete the NetworkInterface object from k8s
+				Expect(k8sClient.Delete(ctx, networkInterface)).To(Succeed())
+
+				// Ensure it's deleted
+				deletedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: ns.Name,
+					Name:      networkInterface.Name,
+				}, deletedIface)).ToNot(Succeed())
+
+				// NetworkInterface should still be in dpservice
+				_, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				Expect(err).ToNot(HaveOccurred())
+
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeTrue())
+			})
+
+			It("should reconcile successfully after delete", func() {
+				fmt.Println("##### int rec delete", ns.Name)
+				// Create and initialize networkInterface reconciler
+				ifaceReconcile(ctx, *networkInterface)
+
+				// Try to fetch the deleted networkInterface object from k8s
+				fetchedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, fetchedIface)).ToNot(Succeed())
+
+				// Try to fetch the deleted networkInterface object from dpservice
+				_, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				Expect(err).To(HaveOccurred())
+
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeFalse())
 			})
 		})
 	})
@@ -447,6 +704,9 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 })
 
 func networkReconcile(ctx context.Context, network metalnetv1alpha1.Network) {
+	// error location will always be in the spec that called the helper, and not the helper itself
+	GinkgoHelper()
+
 	reconciler := &NetworkReconciler{
 		Client:        k8sClient,
 		DPDK:          dpdkClient,
@@ -471,7 +731,41 @@ func networkReconcile(ctx context.Context, network metalnetv1alpha1.Network) {
 	}
 }
 
+func ifaceReconcile(ctx context.Context, networkInterface metalnetv1alpha1.NetworkInterface) {
+	// error location will always be in the spec that called the helper, and not the helper itself
+	GinkgoHelper()
+
+	// Create and initialize Network Interface reconciler
+	reconciler := &NetworkInterfaceReconciler{
+		Client:        k8sClient,
+		EventRecorder: &record.FakeRecorder{},
+		DPDK:          dpdkClient,
+		Metalbond:     metalbondClient,
+		NodeName:      testNode,
+		NetFnsManager: netFnsManager,
+		PublicVNI:     100,
+	}
+
+	// Loop the reconciler until Requeue is false
+	for {
+		res, err := reconciler.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      networkInterface.Name,
+				Namespace: networkInterface.Namespace,
+			},
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		if res.Requeue == false {
+			break
+		}
+	}
+}
+
 func lbReconcile(ctx context.Context, loadBalancer metalnetv1alpha1.LoadBalancer) {
+	// error location will always be in the spec that called the helper, and not the helper itself
+	GinkgoHelper()
+
 	reconciler := &LoadBalancerReconciler{
 		Client:        k8sClient,
 		EventRecorder: &record.FakeRecorder{},
