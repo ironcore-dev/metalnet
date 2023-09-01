@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/jaypipes/ghw"
 	flag "github.com/spf13/pflag"
 
 	metalnetclient "github.com/onmetal/metalnet/client"
@@ -82,10 +83,12 @@ func main() {
 	var dpserviceAddr string
 	var metalbondPeers []string
 	var metalbondDebug bool
+	var tapDeviceMod bool
 	var routerAddress net.IP
 	var publicVNI int
 	var metalnetDir string
 	var preferNetwork string
+	var initAvailable []ghw.PCIAddress
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -93,6 +96,7 @@ func main() {
 	flag.StringVar(&dpserviceAddr, "dp-service-address", "127.0.0.1:1337", "The address of net-dpservice.")
 	flag.StringSliceVar(&metalbondPeers, "metalbond-peer", nil, "The addresses of the metalbond peers.")
 	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
+	flag.BoolVar(&tapDeviceMod, "tapdevice-mod", false, "Enable TAP device support")
 	flag.IPVar(&routerAddress, "router-address", net.IP{}, "The address of the next router.")
 	flag.IntVar(&publicVNI, "public-vni", 100, "Virtual network identifier used for public routing announcements.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -139,16 +143,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	claimStore, err := netfns.NewFileClaimStore(filepath.Join(metalnetDir, "netfns", "claims"), false)
+	claimStore, err := netfns.NewFileClaimStore(filepath.Join(metalnetDir, "netfns", "claims"), tapDeviceMod)
 	if err != nil {
 		setupLog.Error(err, "unable to create claim store")
 		os.Exit(1)
 	}
 
-	initAvailable, err := netfns.CollectVirtualFunctions(sysFS)
-	if err != nil {
-		setupLog.Error(err, "unable to collect virtual functions")
-		os.Exit(1)
+	if !tapDeviceMod {
+		initAvailable, err = netfns.CollectVirtualFunctions(sysFS)
+		if err != nil {
+			setupLog.Error(err, "unable to collect virtual functions")
+			os.Exit(1)
+		}
+	} else {
+		initAvailable, err = netfns.CollectTAPFunctions([]string{"net_tap3", "net_tap4", "net_tap5"})
+		if err != nil {
+			setupLog.Error(err, "unable to collect TAP functions")
+			os.Exit(1)
+		}
 	}
 
 	netFnsManager, err := netfns.NewManager(claimStore, initAvailable)
