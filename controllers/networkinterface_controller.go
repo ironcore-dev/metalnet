@@ -825,7 +825,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 			Slot:     pciAddr.Device,
 			Function: pciAddr.Function,
 		}
-		if virtualIPErr != nil {
+		if virtualIPErr == nil {
 			nic.Status.VirtualIP = nic.Spec.VirtualIP
 		}
 		if natIPErr == nil {
@@ -837,10 +837,10 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 		} else {
 			nic.Status.NatIP = nil
 		}
-		if prefixesErr != nil {
+		if prefixesErr == nil {
 			nic.Status.Prefixes = nic.Spec.Prefixes
 		}
-		if lbTargetErr != nil {
+		if lbTargetErr == nil {
 			nic.Status.LoadBalancerTargets = nic.Spec.LoadBalancerTargets
 		}
 	}); err != nil {
