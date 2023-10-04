@@ -57,7 +57,7 @@ var (
 	ctxGrpc         context.Context
 	dpserviceAddr   string = "127.0.0.1:1337"
 	testNode        string = "testNode"
-	metalnetDir     string = "/var/lib/metalnet"
+	metalnetDir     string = "/tmp/var/lib/metalnet"
 	netFnsManager   *netfns.Manager
 	conn            *grpc.ClientConn
 	dpdkProtoClient dpdkproto.DPDKonmetalClient

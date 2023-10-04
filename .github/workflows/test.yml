@@ -29,7 +29,7 @@ jobs:
         run: metalbond server --listen [::1]:4711 --http [::1]:4712 --keepalive 3 &
 
       - name: Run dp-service
-        run: docker run --privileged --mount type=bind,source=/dev/hugepages,target=/dev/hugepages ghcr.io/onmetal/dp-service-tester:latest &
+        run: docker run -it --rm --entrypoint ./dp_service.py --privileged -p1337:1337 --mount type=bind,source=/dev/hugepages,target=/dev/hugepages ghcr.io/onmetal/dp-service-tester --no-init &
 
       - uses: actions/setup-go@v4
         with:
