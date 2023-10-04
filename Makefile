@@ -64,6 +64,10 @@ addlicense: ## Add license headers to all go files.
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
+
 .PHONY: checklicense
 checklicense: ## Check that every file has a license header present.
 	find . -name '*.go' -exec go run github.com/google/addlicense  -check -c 'OnMetal authors' {} +
