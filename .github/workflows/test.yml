@@ -1,9 +1,6 @@
 name: Pull Request Code test
 
 on:
-  push:
-    branches:
-      - 'feature/*'
   pull_request_target:
     types: [ assigned, opened, synchronize, reopened ]
     paths-ignore:
@@ -48,3 +45,8 @@ jobs:
         if: always()
         run: |
           rm ~/.gitconfig
+      - name: Cleanup services
+        if: always()
+        run: |
+          killall metalbond
+          for i in $(docker ps -q); do docker stop $i; done
