@@ -32,7 +32,7 @@ import (
 
 	metalnetclient "github.com/onmetal/metalnet/client"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// Import  all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	"google.golang.org/grpc"
