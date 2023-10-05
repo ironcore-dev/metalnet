@@ -27,6 +27,4 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.BOT_PRIVATE_KEY }}
       - run: ./hack/setup-git-redirect.sh
-      - run: |
-          echo "TMPDIR=$HOME/actions-runner/_work/_temp" >> $GITHUB_ENV
       - run: make test
