@@ -44,8 +44,7 @@ jobs:
           ssh-private-key: ${{ secrets.BOT_PRIVATE_KEY }}
       - run: ./hack/setup-git-redirect.sh
       - run: make test
-      - name: Restore git global config
+      - name: Delete git global config
         if: always()
         run: |
-          MATCH=$(grep -o 'git@.*github\.com:' ~/.gitconfig)
-          git config --global --remove-section url.${MATCH}
+          rm ~/.gitconfig
