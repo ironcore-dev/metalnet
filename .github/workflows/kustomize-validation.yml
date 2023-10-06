@@ -9,7 +9,9 @@ on:
 
 jobs:
   kustomize-validation:
-    runs-on: self-hosted
+    runs-on:
+      labels: self-hosted
+      group: organization/default
     steps:
       - name: Check out code
         uses: actions/checkout@v3

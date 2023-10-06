@@ -24,7 +24,9 @@ on:
 jobs:
   buildAndPush:
     if: ${{ github.event.label.name == 'ok-to-image' }} || ${{ github.event.label.name == 'ok-to-🐳' }} || ${{ github.ref == 'refs/heads/main' }}
-    runs-on: self-hosted
+    runs-on:
+      labels: self-hosted
+      group: organization/default
     steps:
       - uses: actions/checkout@v3
         with:

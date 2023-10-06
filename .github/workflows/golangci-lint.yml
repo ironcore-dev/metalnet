@@ -8,7 +8,9 @@ on:
 jobs:
   golangci:
     name: lint
-    runs-on: self-hosted
+    runs-on:
+      labels: self-hosted
+      group: organization/default
     steps:
       - uses: actions/checkout@v3
         with:
