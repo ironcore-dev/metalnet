@@ -262,10 +262,10 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				By("wrong FirewallRule data")
 				var protocolType metalnetv1alpha1.ProtocolType = "TCP"
 				var srcPort int32 = 75000
-				wfr1 := metalnetv1alpha1.FirewallRuleSpec{
+				wfr1 := metalnetv1alpha1.FirewallRule{
 					FirewallRuleID:    "wfr1",
-					Direction:         "INGRESS",
-					Action:            "ACCEPT",
+					Direction:         metalnetv1alpha1.FirewallRuleDirectionIngress,
+					Action:            metalnetv1alpha1.FirewallRuleActionAccept,
 					IpFamily:          "IPv4",
 					SourcePrefix:      metalnetv1alpha1.MustParseNewIPPrefix("0.0.0.0/0"),
 					DestinationPrefix: metalnetv1alpha1.MustParseNewIPPrefix("10.0.0.10/32"),
@@ -294,7 +294,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 								Addr: netip.MustParseAddr("10.0.0.1"),
 							},
 						},
-						FirewallRules: []metalnetv1alpha1.FirewallRuleSpec{wfr1},
+						FirewallRules: []metalnetv1alpha1.FirewallRule{wfr1},
 					},
 				}
 
@@ -605,10 +605,10 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				By("adding the FirewallRule")
 				var protocolType metalnetv1alpha1.ProtocolType = "TCP"
 				var srcPort int32 = 80
-				fr1 := metalnetv1alpha1.FirewallRuleSpec{
+				fr1 := metalnetv1alpha1.FirewallRule{
 					FirewallRuleID:    "fr1",
-					Direction:         "INGRESS",
-					Action:            "ACCEPT",
+					Direction:         metalnetv1alpha1.FirewallRuleDirectionIngress,
+					Action:            metalnetv1alpha1.FirewallRuleActionAccept,
 					IpFamily:          "IPv4",
 					SourcePrefix:      metalnetv1alpha1.MustParseNewIPPrefix("0.0.0.0/0"),
 					DestinationPrefix: metalnetv1alpha1.MustParseNewIPPrefix("10.0.0.10/32"),
@@ -622,7 +622,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}
 
 				patchIface := networkInterface.DeepCopy()
-				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRuleSpec{fr1}
+				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{fr1}
 
 				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
 
@@ -652,7 +652,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				fr1.ProtocolMatch.PortRange.DstPort = &dstPort
 
 				patchIface = updatedIface.DeepCopy()
-				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRuleSpec{fr1}
+				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{fr1}
 
 				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
 
@@ -671,7 +671,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 
 				By("deleting the FirewallRule")
 				patchIface = updatedIface.DeepCopy()
-				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRuleSpec{}
+				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{}
 
 				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
 

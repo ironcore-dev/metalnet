@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -377,24 +378,24 @@ func (r *NetworkReconciler) unsubscribeIfSubscribed(ctx context.Context, vni uin
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *NetworkReconciler) SetupWithManager(mgr ctrl.Manager, metalnetCache cache.Cache) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metalnetv1alpha1.Network{}).
 		WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
-		Watches(
-			&source.Kind{Type: &metalnetv1alpha1.NetworkInterface{}},
+		WatchesRawSource(
+			source.Kind(metalnetCache, &metalnetv1alpha1.NetworkInterface{}),
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForNetworkInterface),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		Watches(
-			&source.Kind{Type: &metalnetv1alpha1.LoadBalancer{}},
+		WatchesRawSource(
+			source.Kind(metalnetCache, &metalnetv1alpha1.LoadBalancer{}),
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForLoadBalancer),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Complete(r)
 }
 
-func (r *NetworkReconciler) findObjectsForNetworkInterface(obj client.Object) []reconcile.Request {
+func (r *NetworkReconciler) findObjectsForNetworkInterface(ctx context.Context, obj client.Object) []reconcile.Request {
 	networkInterface, ok := obj.(*metalnetv1alpha1.NetworkInterface)
 	if !ok {
 		return []reconcile.Request{}
@@ -412,7 +413,7 @@ func (r *NetworkReconciler) networkFinalizer() string {
 	return fmt.Sprintf("%s-%s", networkFinalizer, r.NodeName)
 }
 
-func (r *NetworkReconciler) findObjectsForLoadBalancer(obj client.Object) []reconcile.Request {
+func (r *NetworkReconciler) findObjectsForLoadBalancer(ctx context.Context, obj client.Object) []reconcile.Request {
 	loadBalancer, ok := obj.(*metalnetv1alpha1.LoadBalancer)
 	if !ok {
 		return []reconcile.Request{}

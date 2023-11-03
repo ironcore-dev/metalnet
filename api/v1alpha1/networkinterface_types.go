@@ -43,7 +43,7 @@ type NetworkInterfaceSpec struct {
 	// NodeName is the name of the node on which the interface should be created.
 	NodeName *string `json:"nodeName,omitempty"`
 	// FirewallRules are the firewall rules to be applied to this interface.
-	FirewallRules []FirewallRuleSpec `json:"firewallRules,omitempty"`
+	FirewallRules []FirewallRule `json:"firewallRules,omitempty"`
 }
 
 // NetworkInterfaceStatus defines the observed state of NetworkInterface
@@ -86,16 +86,16 @@ const (
 	NetworkInterfaceStateError NetworkInterfaceState = "Error"
 )
 
-// FirewallRuleSpec defines the desired state of FirewallRule
-type FirewallRuleSpec struct {
-	FirewallRuleID    types.UID       `json:"firewallRuleID"`
-	Direction         string          `json:"direction"`
-	Action            string          `json:"action"`
-	Priority          *int32          `json:"priority,omitempty"`
-	IpFamily          corev1.IPFamily `json:"ipFamily"`
-	SourcePrefix      *IPPrefix       `json:"sourcePrefix,omitempty"`
-	DestinationPrefix *IPPrefix       `json:"destinationPrefix,omitempty"`
-	ProtocolMatch     *ProtocolMatch  `json:"protocolMatch,omitempty"`
+// FirewallRule defines the desired state of FirewallRule
+type FirewallRule struct {
+	FirewallRuleID    types.UID             `json:"firewallRuleID"`
+	Direction         FirewallRuleDirection `json:"direction"`
+	Action            FirewallRuleAction    `json:"action"`
+	Priority          *int32                `json:"priority,omitempty"`
+	IpFamily          corev1.IPFamily       `json:"ipFamily"`
+	SourcePrefix      *IPPrefix             `json:"sourcePrefix,omitempty"`
+	DestinationPrefix *IPPrefix             `json:"destinationPrefix,omitempty"`
+	ProtocolMatch     *ProtocolMatch        `json:"protocolMatch,omitempty"`
 }
 
 type ProtocolMatch struct {
@@ -133,20 +133,20 @@ type FirewallRuleAction string
 
 // Currently only Accept rules can be used.
 const (
-	// FirewallRuleAccept is used to accept traffic.
-	FirewallRuleAccept FirewallRuleAction = "ACCEPT"
-	// FirewallRuleDeny is used to deny traffic.
-	FirewallRuleDeny FirewallRuleAction = "DENY"
+	// FirewallRuleActionAccept is used to accept traffic.
+	FirewallRuleActionAccept FirewallRuleAction = "Accept"
+	// FirewallRuleActionDeny is used to deny traffic.
+	FirewallRuleActionDeny FirewallRuleAction = "Deny"
 )
 
 // FirewallRuleDirection is the direction of the rule.
 type FirewallRuleDirection string
 
 const (
-	// FirewallRuleIngress is used to define rules for incoming traffic.
-	FirewallRuleIngress FirewallRuleDirection = "INGRESS"
-	// FirewallRuleEgress is used to define rules for outgoing traffic.
-	FirewallRuleEgress FirewallRuleDirection = "EGRESS"
+	// FirewallRuleDirectionIngress is used to define rules for incoming traffic.
+	FirewallRuleDirectionIngress FirewallRuleDirection = "Ingress"
+	// FirewallRuleDirectionEgress is used to define rules for outgoing traffic.
+	FirewallRuleDirectionEgress FirewallRuleDirection = "Egress"
 )
 
 //+kubebuilder:object:root=true

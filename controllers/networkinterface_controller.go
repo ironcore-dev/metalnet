@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -297,7 +298,7 @@ func (r *NetworkInterfaceReconciler) removeLBTargetRouteIfExists(ctx context.Con
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) fillTCPUDPFilter(ctx context.Context, specFirewallRule *metalnetv1alpha1.FirewallRuleSpec, protocolFilter *dpdkproto.ProtocolFilter) error {
+func (r *NetworkInterfaceReconciler) fillTCPUDPFilter(ctx context.Context, specFirewallRule *metalnetv1alpha1.FirewallRule, protocolFilter *dpdkproto.ProtocolFilter) error {
 	var SrcPortLower, DstPortLower, SrcPortUpper, DstPortUpper int32
 	if specFirewallRule.ProtocolMatch.PortRange != nil {
 		if specFirewallRule.ProtocolMatch.PortRange.SrcPort != nil {
@@ -339,7 +340,7 @@ func (r *NetworkInterfaceReconciler) fillTCPUDPFilter(ctx context.Context, specF
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) createDPDKFwRule(ctx context.Context, nic *metalnetv1alpha1.NetworkInterface, specFirewallRule *metalnetv1alpha1.FirewallRuleSpec) error {
+func (r *NetworkInterfaceReconciler) createDPDKFwRule(ctx context.Context, nic *metalnetv1alpha1.NetworkInterface, specFirewallRule *metalnetv1alpha1.FirewallRule) error {
 	var (
 		protocolFilter dpdkproto.ProtocolFilter
 		priority       uint32 = defaultFirewallRulePrio
@@ -399,8 +400,8 @@ func (r *NetworkInterfaceReconciler) createDPDKFwRule(ctx context.Context, nic *
 		},
 		Spec: dpdk.FirewallRuleSpec{
 			RuleID:            string(specFirewallRule.FirewallRuleID),
-			TrafficDirection:  specFirewallRule.Direction,
-			FirewallAction:    specFirewallRule.Action,
+			TrafficDirection:  string(specFirewallRule.Direction),
+			FirewallAction:    string(specFirewallRule.Action),
 			Priority:          priority,
 			SourcePrefix:      &sourcePrefix.Prefix,
 			DestinationPrefix: &destPrefix.Prefix,
@@ -1116,7 +1117,7 @@ func (r *NetworkInterfaceReconciler) reconcileFirewallRules(ctx context.Context,
 		})
 	}
 	var errs []error
-	var specFirewallRule metalnetv1alpha1.FirewallRuleSpec
+	var specFirewallRule metalnetv1alpha1.FirewallRule
 	for _, fwRuleID := range allFirewallRules {
 		if err := func() error {
 			log := log.WithValues("FirewallRuleID", fwRuleID)
@@ -1510,25 +1511,25 @@ func (r *NetworkInterfaceReconciler) deleteInterface(
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NetworkInterfaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *NetworkInterfaceReconciler) SetupWithManager(mgr ctrl.Manager, metalnetCache cache.Cache) error {
 	log := ctrl.Log.WithName("networkinterface").WithName("setup")
 	ctx := ctrl.LoggerInto(context.TODO(), log)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metalnetv1alpha1.NetworkInterface{}).
-		Watches(
-			&source.Kind{Type: &metalnetv1alpha1.Network{}},
+		WatchesRawSource(
+			source.Kind(metalnetCache, &metalnetv1alpha1.Network{}),
 			r.enqueueNetworkInterfacesReferencingNetwork(ctx, log),
 		).
-		Watches(
-			&source.Kind{Type: &metalnetv1alpha1.LoadBalancer{}},
+		WatchesRawSource(
+			source.Kind(metalnetCache, &metalnetv1alpha1.LoadBalancer{}),
 			r.enqueueNetworkInterfacesReferencingLoadBalancer(ctx, log),
 		).
 		Complete(r)
 }
 
 func (r *NetworkInterfaceReconciler) enqueueNetworkInterfacesReferencingNetwork(ctx context.Context, log logr.Logger) handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []ctrl.Request {
+	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []ctrl.Request {
 		network := obj.(*metalnetv1alpha1.Network)
 		nicList := &metalnetv1alpha1.NetworkInterfaceList{}
 		if err := r.List(ctx, nicList,
@@ -1548,7 +1549,7 @@ func (r *NetworkInterfaceReconciler) enqueueNetworkInterfacesReferencingNetwork(
 }
 
 func (r *NetworkInterfaceReconciler) enqueueNetworkInterfacesReferencingLoadBalancer(ctx context.Context, log logr.Logger) handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []ctrl.Request {
+	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []ctrl.Request {
 		loadBalancer := obj.(*metalnetv1alpha1.LoadBalancer)
 		nicList := &metalnetv1alpha1.NetworkInterfaceList{}
 		if err := r.List(ctx, nicList,
