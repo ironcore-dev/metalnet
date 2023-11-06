@@ -9,7 +9,7 @@ require (
 	github.com/onmetal/metalbond v0.3.2
 	github.com/onmetal/net-dpservice-go v0.1.18
 	github.com/onmetal/onmetal-api v0.1.1
-	github.com/onsi/ginkgo/v2 v2.12.1
+	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.27.10
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5

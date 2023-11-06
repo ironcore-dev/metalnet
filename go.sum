@@ -110,8 +110,8 @@ github.com/onmetal/net-dpservice-go v0.1.18 h1:c4yFXzSa6i3L1JQHH18fmUv2S+mSL/guF
 github.com/onmetal/net-dpservice-go v0.1.18/go.mod h1:M7dg98Xx54qZqWMCWS5LUra3z0x459Pg4/l3F5He4Jk=
 github.com/onmetal/onmetal-api v0.1.1 h1:8YEtQBsxQzb+MKvbFypuYp/x8AZ96mN4NCx8bRxHvFA=
 github.com/onmetal/onmetal-api v0.1.1/go.mod h1:mql3gEgyCDeqkQbeM62C/FRuCwXSfBVsvg/FiBczN6M=
-github.com/onsi/ginkgo/v2 v2.12.1 h1:uHNEO1RP2SpuZApSkel9nEh1/Mu+hmQe7Q+Pepg5OYA=
-github.com/onsi/ginkgo/v2 v2.12.1/go.mod h1:TE309ZR8s5FsKKpuB1YAQYBzCaAfUgatB/xlT/ETL/o=
+github.com/onsi/ginkgo/v2 v2.13.0 h1:0jY9lJquiL8fcf3M4LAXN5aMlS/b2BV86HFFPCPMgE4=
+github.com/onsi/ginkgo/v2 v2.13.0/go.mod h1:TE309ZR8s5FsKKpuB1YAQYBzCaAfUgatB/xlT/ETL/o=
 github.com/onsi/gomega v1.27.10 h1:naR28SdDFlqrG6kScpT8VWpu1xWY5nJRCF3XaYyBjhI=
 github.com/onsi/gomega v1.27.10/go.mod h1:RsS8tutOdbdgzbPtzzATp12yT7kM5I5aElG3evPbQ0M=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
