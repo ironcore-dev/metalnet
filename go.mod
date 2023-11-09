@@ -7,7 +7,7 @@ require (
 	github.com/jaypipes/ghw v0.12.0
 	github.com/onmetal/controller-utils v0.8.2
 	github.com/onmetal/metalbond v0.3.3
-	github.com/onmetal/net-dpservice-go v0.1.18
+	github.com/onmetal/net-dpservice-go v0.1.19
 	github.com/onmetal/onmetal-api v0.1.1
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.30.0
