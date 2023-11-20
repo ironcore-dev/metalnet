@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"net/netip"
 	"path/filepath"
 	"testing"
 	"time"
@@ -66,6 +67,11 @@ var (
 	metalnetMBClient   *metalbond.MetalnetClient
 	metalbondRouteUtil *metalbond.MBRouteUtil
 )
+
+var defaultRouterAddr metalbond.DefaultRouterAddress = metalbond.DefaultRouterAddress{
+	RouterAddress: netip.MustParseAddr("::1"),
+	PublicVNI:     100,
+}
 
 // This assumes running metalbond server and dp-service on the same localhost of this test suite
 // metalbond server --listen [::1]:4711 --http [::1]:4712 --keepalive 3
@@ -133,10 +139,10 @@ var _ = BeforeSuite(func() {
 	logger := zap.New(zap.UseFlagOptions(&opts))
 
 	metalnetCache = internal.NewMetalnetCache(&logger)
-	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalbond.ClientOptions{
+	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr, metalbond.ClientOptions{
 		IPv4Only:         true,
 		PreferredNetwork: nil,
-	}, metalnetCache)
+	})
 
 	mbInstance := mb.NewMetalBond(config, metalnetMBClient)
 	metalbondRouteUtil = metalbond.NewMBRouteUtil(mbInstance)

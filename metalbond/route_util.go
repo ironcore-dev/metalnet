@@ -17,10 +17,24 @@ package metalbond
 import (
 	"context"
 	"net/netip"
+	"sync"
 
 	"github.com/onmetal/metalbond"
 	"github.com/onmetal/metalbond/pb"
 )
+
+type DefaultRouteOperation int
+
+const (
+	AddDefaultRoute DefaultRouteOperation = iota + 1
+	RemoveDefaultRoute
+)
+
+type DefaultRouterAddress struct {
+	RouterAddress netip.Addr
+	PublicVNI     uint32
+	RWMutex       sync.RWMutex
+}
 
 type RouteUtil interface {
 	AnnounceRoute(ctx context.Context, vni VNI, destination Destination, nextHop NextHop) error

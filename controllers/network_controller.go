@@ -58,8 +58,8 @@ type NetworkReconciler struct {
 	MetalnetCache    *internal.MetalnetCache
 	MetalnetMBClient *metalbond.MetalnetClient
 
-	RouterAddress netip.Addr
-	NodeName      string
+	DefaultRouterAddr *metalbond.DefaultRouterAddress
+	NodeName          string
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networks,verbs=get;list;watch;create;update;patch;delete
@@ -189,6 +189,13 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 
 func (r *NetworkReconciler) createDefaultRouteIfNotExists(ctx context.Context, vni uint32) error {
 	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
+	r.DefaultRouterAddr.RWMutex.RLock()
+	defer r.DefaultRouterAddr.RWMutex.RUnlock()
+
+	if !r.DefaultRouterAddr.RouterAddress.IsValid() {
+		return fmt.Errorf("default router address is invalid")
+	}
+
 	if _, err := r.DPDK.CreateRoute(ctx, &dpdk.Route{
 		RouteMeta: dpdk.RouteMeta{
 			VNI: vni,
@@ -197,7 +204,7 @@ func (r *NetworkReconciler) createDefaultRouteIfNotExists(ctx context.Context, v
 			Prefix: &defaultRoutePrefix,
 			NextHop: &dpdk.RouteNextHop{
 				VNI: vni,
-				IP:  &r.RouterAddress,
+				IP:  &r.DefaultRouterAddr.RouterAddress,
 			},
 		},
 	},

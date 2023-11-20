@@ -1,0 +1,14 @@
+apiVersion: networking.metalnet.onmetal.de/v1alpha1
+kind: NetworkInterface
+metadata:
+  name: networkinterface-sample-lenovo-1
+  labels:
+    lab: fra4-lab
+spec:
+  ipFamilies:
+    - "IPv4"
+  ips:
+    - 10.0.0.8
+  nodeName: fra4-lab-lenovo-1
+  networkRef:
+    name: network-sample

@@ -1258,7 +1258,8 @@ func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (s
 	}
 
 	pciFunction = pciDevice*8 + pciFunction
-	return fmt.Sprintf("%s:%s:%s.0_representor_vf%d", physFnAddr.Domain, physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
+	// return fmt.Sprintf("%s:%s:%s.0_representor_vf%d", physFnAddr.Domain, physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
+	return fmt.Sprintf("%s:%s.0_representor_vf%d", physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
 }
 
 func (r *NetworkInterfaceReconciler) patchStatus(

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/netip"
 	"os"
 	"path/filepath"
 	"time"
@@ -85,11 +84,11 @@ func main() {
 	var metalbondPeers []string
 	var metalbondDebug bool
 	var tapDeviceMod bool
-	var routerAddress net.IP
 	var publicVNI int
 	var metalnetDir string
 	var preferNetwork string
 	var initAvailable []ghw.PCIAddress
+	var defaultRouterAddr metalbond.DefaultRouterAddress
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -98,7 +97,6 @@ func main() {
 	flag.StringSliceVar(&metalbondPeers, "metalbond-peer", nil, "The addresses of the metalbond peers.")
 	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
 	flag.BoolVar(&tapDeviceMod, "tapdevice-mod", false, "Enable TAP device support")
-	flag.IPVar(&routerAddress, "router-address", net.IP{}, "The address of the next router.")
 	flag.IntVar(&publicVNI, "public-vni", 100, "Virtual network identifier used for public routing announcements.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
@@ -120,10 +118,7 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	if routerAddress.Equal(net.IP{}) {
-		setupLog.Error(fmt.Errorf("must specify --router-address"), "invalid flags")
-		os.Exit(1)
-	}
+	defaultRouterAddr.PublicVNI = uint32(publicVNI)
 
 	sysFS, err := sysfs.NewDefaultFS()
 	if err != nil {
@@ -198,10 +193,10 @@ func main() {
 	dpdkClient := dpdkclient.NewClient(dpdkProtoClient)
 
 	metalnetCache := internal.NewMetalnetCache(&logger)
-	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalbond.ClientOptions{
+	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr, metalbond.ClientOptions{
 		IPv4Only:         true,
 		PreferredNetwork: preferredNetwork,
-	}, metalnetCache)
+	})
 
 	config := mb.Config{
 		KeepaliveInterval: 3,
@@ -259,15 +254,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = metalbondRouteUtil.Subscribe(ctx, metalbond.VNI(publicVNI))
+	if err != nil {
+		setupLog.Error(err, "unable to subscribe to metalbond's public VNI")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.NetworkReconciler{
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		DPDK:             dpdkClient,
-		RouteUtil:        metalbondRouteUtil,
-		MetalnetCache:    metalnetCache,
-		MetalnetMBClient: metalnetMBClient,
-		RouterAddress:    netip.MustParseAddr(routerAddress.String()),
-		NodeName:         nodeName,
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		DPDK:              dpdkClient,
+		RouteUtil:         metalbondRouteUtil,
+		MetalnetCache:     metalnetCache,
+		MetalnetMBClient:  metalnetMBClient,
+		DefaultRouterAddr: &defaultRouterAddr,
+		NodeName:          nodeName,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Network")
 		os.Exit(1)

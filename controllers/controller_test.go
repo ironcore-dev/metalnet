@@ -1408,13 +1408,13 @@ func networkReconcile(ctx context.Context, network metalnetv1alpha1.Network) err
 	GinkgoHelper()
 
 	reconciler := &NetworkReconciler{
-		Client:           k8sClient,
-		DPDK:             dpdkClient,
-		RouteUtil:        metalbondRouteUtil,
-		MetalnetCache:    metalnetCache,
-		MetalnetMBClient: metalnetMBClient,
-		RouterAddress:    netip.MustParseAddr("::1"),
-		NodeName:         testNode,
+		Client:            k8sClient,
+		DPDK:              dpdkClient,
+		RouteUtil:         metalbondRouteUtil,
+		MetalnetCache:     metalnetCache,
+		MetalnetMBClient:  metalnetMBClient,
+		DefaultRouterAddr: &defaultRouterAddr,
+		NodeName:          testNode,
 	}
 
 	// Loop the reconciler until Requeue is false or error occurs

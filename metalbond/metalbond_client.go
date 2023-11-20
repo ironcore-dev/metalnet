@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -28,6 +29,7 @@ import (
 	dpdk "github.com/onmetal/net-dpservice-go/api"
 	dpdkclient "github.com/onmetal/net-dpservice-go/client"
 	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type ClientOptions struct {
@@ -36,19 +38,21 @@ type ClientOptions struct {
 }
 
 type MetalnetClient struct {
-	dpdk          dpdkclient.Client
-	config        ClientOptions
-	metalnetCache *internal.MetalnetCache
+	dpdk                 dpdkclient.Client
+	config               ClientOptions
+	metalnetCache        *internal.MetalnetCache
+	DefaultRouterAddress *DefaultRouterAddress
 
 	log *logr.Logger
 }
 
-func NewMetalnetClient(log *logr.Logger, dpdkClient dpdkclient.Client, opts ClientOptions, metalnetCache *internal.MetalnetCache) *MetalnetClient {
+func NewMetalnetClient(log *logr.Logger, dpdkClient dpdkclient.Client, metalnetCache *internal.MetalnetCache, routerAddr *DefaultRouterAddress, opts ClientOptions) *MetalnetClient {
 	return &MetalnetClient{
-		dpdk:          dpdkClient,
-		config:        opts,
-		metalnetCache: metalnetCache,
-		log:           log,
+		dpdk:                 dpdkClient,
+		metalnetCache:        metalnetCache,
+		DefaultRouterAddress: routerAddr,
+		config:               opts,
+		log:                  log,
 	}
 }
 
@@ -185,6 +189,13 @@ func (c *MetalnetClient) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHo
 	c.log.V(1).Info("AddRoute", "VNI", vni, "dest", dest, "hop", hop)
 	var errStrs []string
 
+	isDefaultRoute, err := c.FilterDefaultRoute(AddDefaultRoute, vni, dest, hop)
+	if err != nil {
+		return fmt.Errorf("error handling default router change: %w", err)
+	} else if isDefaultRoute {
+		return nil
+	}
+
 	if err := c.addLocalRoute(vni, vni, dest, hop); err != nil {
 		errStrs = append(errStrs, err.Error())
 	}
@@ -231,6 +242,13 @@ func (c *MetalnetClient) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHo
 func (c *MetalnetClient) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
 	c.log.V(1).Info("RemoveRoute", "VNI", vni, "dest", dest, "hop", hop)
 	var errStrs []string
+
+	isDefaultRoute, err := c.FilterDefaultRoute(RemoveDefaultRoute, vni, dest, hop)
+	if err != nil {
+		return fmt.Errorf("error handling default router change: %w", err)
+	} else if isDefaultRoute {
+		return nil
+	}
 
 	if err := c.removeLocalRoute(vni, vni, dest, hop); err != nil {
 		errStrs = append(errStrs, err.Error())
@@ -279,4 +297,92 @@ func (c *MetalnetClient) CleanupNotPeeredRoutes(vni uint32) error {
 	}
 
 	return nil
+}
+
+func (c *MetalnetClient) SetDefaultRouterAddress(address netip.Addr) {
+	c.DefaultRouterAddress.RouterAddress = address
+}
+
+func (c *MetalnetClient) handleDefaultRouterChange(operation DefaultRouteOperation) error {
+
+	var existingVNIs sets.Set[uint32] = sets.New[uint32]()
+	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
+	ctx := context.TODO()
+
+	// only inject default route if an interface is already created
+	// same for the LB config, it does not matter if an LB is installed in a vni but its target interface exists in a vni
+	// it is because that, default route only takes effects for reply traffic flows
+	interfaces, err := c.dpdk.ListInterfaces(ctx)
+	if err != nil {
+		return fmt.Errorf("error listing interfaces: %w", err)
+	}
+
+	for _, iface := range interfaces.Items {
+		if iface.Spec.VNI != 0 {
+			existingVNIs.Insert(iface.Spec.VNI)
+		}
+	}
+
+	for vni := range existingVNIs {
+
+		if operation == RemoveDefaultRoute {
+			if _, err := c.dpdk.DeleteRoute(
+				ctx,
+				vni,
+				&defaultRoutePrefix,
+				dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND),
+			); err != nil {
+				return fmt.Errorf("error deleting default route: %w", err)
+			}
+		}
+
+		if operation == AddDefaultRoute {
+			if _, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
+				RouteMeta: dpdk.RouteMeta{
+					VNI: vni,
+				},
+				Spec: dpdk.RouteSpec{
+					Prefix: &defaultRoutePrefix,
+					NextHop: &dpdk.RouteNextHop{
+						VNI: vni,
+						IP:  &c.DefaultRouterAddress.RouterAddress,
+					},
+				},
+			},
+				dpdkerrors.Ignore(dpdkerrors.ROUTE_EXISTS),
+			); err != nil {
+				return fmt.Errorf("error creating default route: %w", err)
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
+func (c *MetalnetClient) FilterDefaultRoute(operation DefaultRouteOperation, vni mb.VNI, dest mb.Destination, hop mb.NextHop) (bool, error) {
+	if uint32(vni) != c.DefaultRouterAddress.PublicVNI {
+		return false, nil
+	}
+
+	if dest.Prefix.String() != "0.0.0.0/0" {
+		return false, nil
+	}
+
+	c.DefaultRouterAddress.RWMutex.Lock()
+	defer c.DefaultRouterAddress.RWMutex.Unlock()
+
+	if operation == AddDefaultRoute {
+		fmt.Printf("Adding default route to %s\n", hop.TargetAddress)
+		c.SetDefaultRouterAddress(hop.TargetAddress)
+	} else {
+		c.SetDefaultRouterAddress(netip.Addr{})
+	}
+
+	if err := c.handleDefaultRouterChange(operation); err != nil {
+		return true, fmt.Errorf("error handling default router change: %w, operation %d", err, operation)
+	}
+
+	return true, nil
 }
