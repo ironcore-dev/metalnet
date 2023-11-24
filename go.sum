@@ -105,8 +105,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/onmetal/controller-utils v0.8.2 h1:dMPTWivqFVIkSbHRtG9Xue+kVR+Hqu3Ag8ULDBQg5Jo=
 github.com/onmetal/controller-utils v0.8.2/go.mod h1:FNYXMHxQsZuEypdScP1ZEBK5i10XyCkNNGzhB6icglA=
-github.com/onmetal/metalbond v0.3.3 h1:JSRt5xlQ67MXLvw1mEE5a/C//vP2v2BC6Hm5rnKtQks=
-github.com/onmetal/metalbond v0.3.3/go.mod h1:eAMo2+Ph4nQo1RJSV8813Hoafwpdk8E/uZAHhAXbIkg=
+github.com/onmetal/metalbond v0.3.4 h1:4mp0jbi5bhxyGGGYGBtYMPMHxsxCPkwEJd8478NO+bs=
+github.com/onmetal/metalbond v0.3.4/go.mod h1:eAMo2+Ph4nQo1RJSV8813Hoafwpdk8E/uZAHhAXbIkg=
 github.com/onmetal/net-dpservice-go v0.1.20 h1:ZnY+P1/e7oY91Nq+08o1w1JH86KkJ7CoA7h02mEU7OM=
 github.com/onmetal/net-dpservice-go v0.1.20/go.mod h1:M7dg98Xx54qZqWMCWS5LUra3z0x459Pg4/l3F5He4Jk=
 github.com/onmetal/onmetal-api v0.1.1 h1:8YEtQBsxQzb+MKvbFypuYp/x8AZ96mN4NCx8bRxHvFA=

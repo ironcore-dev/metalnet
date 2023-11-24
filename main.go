@@ -193,10 +193,12 @@ func main() {
 	dpdkClient := dpdkclient.NewClient(dpdkProtoClient)
 
 	metalnetCache := internal.NewMetalnetCache(&logger)
-	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr, metalbond.ClientOptions{
-		IPv4Only:         true,
-		PreferredNetwork: preferredNetwork,
-	})
+
+	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr,
+		metalbond.ClientOptions{
+			IPv4Only:         true,
+			PreferredNetwork: preferredNetwork,
+		})
 
 	config := mb.Config{
 		KeepaliveInterval: 3,
@@ -211,6 +213,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	metalnetMBClient.SetMetalBond(mbInstance)
 
 	dpdkUUID, err := dpdkProtoClient.CheckInitialized(context.Background(), &dpdkproto.CheckInitializedRequest{})
 	if err != nil {

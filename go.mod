@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v1.3.0
 	github.com/jaypipes/ghw v0.12.0
 	github.com/onmetal/controller-utils v0.8.2
-	github.com/onmetal/metalbond v0.3.3
+	github.com/onmetal/metalbond v0.3.4
 	github.com/onmetal/net-dpservice-go v0.1.20
 	github.com/onmetal/onmetal-api v0.1.1
 	github.com/onsi/ginkgo/v2 v2.13.0

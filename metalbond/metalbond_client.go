@@ -29,7 +29,6 @@ import (
 	dpdk "github.com/onmetal/net-dpservice-go/api"
 	dpdkclient "github.com/onmetal/net-dpservice-go/client"
 	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type ClientOptions struct {
@@ -41,6 +40,7 @@ type MetalnetClient struct {
 	dpdk                 dpdkclient.Client
 	config               ClientOptions
 	metalnetCache        *internal.MetalnetCache
+	mbInstance           *mb.MetalBond
 	DefaultRouterAddress *DefaultRouterAddress
 
 	log *logr.Logger
@@ -54,6 +54,10 @@ func NewMetalnetClient(log *logr.Logger, dpdkClient dpdkclient.Client, metalnetC
 		config:               opts,
 		log:                  log,
 	}
+}
+
+func (c *MetalnetClient) SetMetalBond(mb *mb.MetalBond) {
+	c.mbInstance = mb
 }
 
 func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
@@ -305,30 +309,20 @@ func (c *MetalnetClient) SetDefaultRouterAddress(address netip.Addr) {
 
 func (c *MetalnetClient) handleDefaultRouterChange(operation DefaultRouteOperation) error {
 
-	var existingVNIs sets.Set[uint32] = sets.New[uint32]()
 	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
 	ctx := context.TODO()
 
-	// only inject default route if an interface is already created
-	// same for the LB config, it does not matter if an LB is installed in a vni but its target interface exists in a vni
-	// it is because that, default route only takes effects for reply traffic flows
-	interfaces, err := c.dpdk.ListInterfaces(ctx)
-	if err != nil {
-		return fmt.Errorf("error listing interfaces: %w", err)
-	}
+	existingVNIs := c.mbInstance.GetSubscribedVnis()
 
-	for _, iface := range interfaces.Items {
-		if iface.Spec.VNI != 0 {
-			existingVNIs.Insert(iface.Spec.VNI)
+	for _, vni := range existingVNIs {
+		if uint32(vni) == c.DefaultRouterAddress.PublicVNI {
+			continue
 		}
-	}
-
-	for vni := range existingVNIs {
 
 		if operation == RemoveDefaultRoute {
 			if _, err := c.dpdk.DeleteRoute(
 				ctx,
-				vni,
+				uint32(vni),
 				&defaultRoutePrefix,
 				dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND),
 			); err != nil {
@@ -339,12 +333,12 @@ func (c *MetalnetClient) handleDefaultRouterChange(operation DefaultRouteOperati
 		if operation == AddDefaultRoute {
 			if _, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
 				RouteMeta: dpdk.RouteMeta{
-					VNI: vni,
+					VNI: uint32(vni),
 				},
 				Spec: dpdk.RouteSpec{
 					Prefix: &defaultRoutePrefix,
 					NextHop: &dpdk.RouteNextHop{
-						VNI: vni,
+						VNI: uint32(vni),
 						IP:  &c.DefaultRouterAddress.RouterAddress,
 					},
 				},
@@ -374,7 +368,6 @@ func (c *MetalnetClient) FilterDefaultRoute(operation DefaultRouteOperation, vni
 	defer c.DefaultRouterAddress.RWMutex.Unlock()
 
 	if operation == AddDefaultRoute {
-		fmt.Printf("Adding default route to %s\n", hop.TargetAddress)
 		c.SetDefaultRouterAddress(hop.TargetAddress)
 	} else {
 		c.SetDefaultRouterAddress(netip.Addr{})
