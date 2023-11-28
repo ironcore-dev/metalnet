@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"time"
@@ -84,6 +85,7 @@ func main() {
 	var metalbondPeers []string
 	var metalbondDebug bool
 	var tapDeviceMod bool
+	var routerAddress net.IP
 	var publicVNI int
 	var metalnetDir string
 	var preferNetwork string
@@ -98,6 +100,7 @@ func main() {
 	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
 	flag.BoolVar(&tapDeviceMod, "tapdevice-mod", false, "Enable TAP device support")
 	flag.IntVar(&publicVNI, "public-vni", 100, "Virtual network identifier used for public routing announcements.")
+	flag.IPVar(&routerAddress, "router-address", net.IP{}, "The address of the next router.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -119,6 +122,7 @@ func main() {
 	}
 
 	defaultRouterAddr.PublicVNI = uint32(publicVNI)
+	defaultRouterAddr.SetBySubsciption = false
 
 	sysFS, err := sysfs.NewDefaultFS()
 	if err != nil {
@@ -263,6 +267,28 @@ func main() {
 		setupLog.Error(err, "unable to subscribe to metalbond's public VNI")
 		os.Exit(1)
 	}
+
+	// wait using backoff for default router address to be set by subscription
+	for i := 1; i <= 3; i++ {
+		if defaultRouterAddr.SetBySubsciption {
+			break
+		}
+		time.Sleep(time.Duration(100*i) * time.Millisecond)
+	}
+
+	defaultRouterAddr.RWMutex.Lock()
+	if defaultRouterAddr.SetBySubsciption {
+		if defaultRouterAddr.RouterAddress.Compare(netip.MustParseAddr(routerAddress.String())) != 0 {
+			setupLog.Info("--router-address flag's value does not match the default router address set by subscription, using the latter")
+		}
+	} else if routerAddress.Equal(net.IP{}) {
+		setupLog.Error(fmt.Errorf("must specify --router-address or obtain default router address via metalbond subscription"), "invalid values")
+		os.Exit(1)
+	} else {
+		defaultRouterAddr.RouterAddress = netip.MustParseAddr(routerAddress.String())
+		setupLog.Info("Couldn't obtain default router address via metalbond subscription, using --router-address flag's value")
+	}
+	defaultRouterAddr.RWMutex.Unlock()
 
 	if err = (&controllers.NetworkReconciler{
 		Client:            mgr.GetClient(),

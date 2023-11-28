@@ -305,6 +305,7 @@ func (c *MetalnetClient) CleanupNotPeeredRoutes(vni uint32) error {
 
 func (c *MetalnetClient) SetDefaultRouterAddress(address netip.Addr) {
 	c.DefaultRouterAddress.RouterAddress = address
+	c.DefaultRouterAddress.SetBySubsciption = true
 }
 
 func (c *MetalnetClient) handleDefaultRouterChange(operation DefaultRouteOperation) error {

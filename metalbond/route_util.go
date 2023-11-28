@@ -31,9 +31,10 @@ const (
 )
 
 type DefaultRouterAddress struct {
-	RouterAddress netip.Addr
-	PublicVNI     uint32
-	RWMutex       sync.RWMutex
+	RouterAddress    netip.Addr
+	PublicVNI        uint32
+	SetBySubsciption bool
+	RWMutex          sync.RWMutex
 }
 
 type RouteUtil interface {
