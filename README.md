@@ -1,85 +1,17 @@
-# metalnet
-// TODO(user): Add simple overview of use/purpose
+[![REUSE status](https://api.reuse.software/badge/github.com/ironcore-dev/metalnet)](https://api.reuse.software/info/github.com/ironcore-dev/metalnet)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ironcore-dev/metalnet)](https://goreportcard.com/report/github.com/ironcore-dev/metalnet)
+[![GitHub License](https://img.shields.io/static/v1?label=License&message=Apache-2.0&color=blue)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+<img src="docs/assets/logo.svg" alt="IronCore Logo" width="200" />
 
-## Getting Started
-You’ll need a Kubernetes cluster to run against. You can use [KIND](docs/kind_install.md) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+# Metalnet
+Metalnet is a stack of kubernetes controller applications to fulfill the requirements on creating functional virtual network elements, by interactiving with our other software components such as [metalbond](https://github.com/ironcore-dev/metalbond) and [dp-service](https://github.com/ironcore-dev/net-dpservice). It manages the lifecycles of virtual network related kubernetes objects, to ensure successful communication for virtual machines.
 
-### Running on the cluster
-1. Install Instances of Custom Resources:
-
-```sh
-kubectl apply -f config/samples/
-```
-
-2. Build and push your image to the location specified by `IMG`:
-	
-```sh
-make docker-build docker-push IMG=<some-registry>/metalnet:tag
-```
-	
-3. Deploy the controller to the cluster with the image specified by `IMG`:
-
-```sh
-make deploy IMG=<some-registry>/metalnet:tag
-```
-
-### Uninstall CRDs
-To delete the CRDs from the cluster:
-
-```sh
-make uninstall
-```
-
-### Undeploy controller
-UnDeploy the controller to the cluster:
-
-```sh
-make undeploy
-```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-### How it works
-This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
-
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 
-which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
-
-### Test It Out
-1. Install the CRDs into the cluster:
-
-```sh
-make install
-```
-
-2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
-
-```sh
-make run
-```
-
-**NOTE:** You can also run this in one step by running: `make install run`
-
-### Modifying the API definitions
-If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
-
-```sh
-make manifests
-```
-
-**NOTE:** Run `make --help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+## Use and develop metalnet
+Please see our documentation in the [`/docs`](./docs) folder for more details.
 
 ## License
-
-Copyright 2022 The Metal Authors.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
