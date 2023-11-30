@@ -9,9 +9,7 @@ on:
 
 jobs:
   kustomize-validation:
-    runs-on:
-      labels: self-hosted
-      group: organization/default
+    runs-on: ubuntu-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v4

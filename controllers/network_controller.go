@@ -22,13 +22,13 @@ import (
 	"net/netip"
 
 	"github.com/go-logr/logr"
-	"github.com/onmetal/controller-utils/clientutils"
-	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
-	"github.com/onmetal/metalnet/internal"
-	"github.com/onmetal/metalnet/metalbond"
-	dpdk "github.com/onmetal/net-dpservice-go/api"
-	dpdkclient "github.com/onmetal/net-dpservice-go/client"
-	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
+	"github.com/ironcore-dev/controller-utils/clientutils"
+	dpdk "github.com/ironcore-dev/dpservice-go/api"
+	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
+	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
+	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
+	"github.com/ironcore-dev/metalnet/internal"
+	"github.com/ironcore-dev/metalnet/metalbond"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	networkFinalizer = "networking.metalnet.onmetal.de/network"
+	networkFinalizer = "networking.metalnet.ironcore.dev/network"
 )
 
 // NetworkReconciler reconciles metalnetv1alpha1.Network.
@@ -62,10 +62,10 @@ type NetworkReconciler struct {
 	NodeName          string
 }
 
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networks,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networks/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networks/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networkinterfaces,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networks,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networks/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networks/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

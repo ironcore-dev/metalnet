@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2022 IronCore authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	dpdk "github.com/ironcore-dev/dpservice-go/api"
+	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
+	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
+	"github.com/ironcore-dev/metalnet/internal"
 	mb "github.com/onmetal/metalbond"
 	mbproto "github.com/onmetal/metalbond/pb"
-	"github.com/onmetal/metalnet/internal"
-	dpdk "github.com/onmetal/net-dpservice-go/api"
-	dpdkclient "github.com/onmetal/net-dpservice-go/client"
-	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
 )
 
 type ClientOptions struct {

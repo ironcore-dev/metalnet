@@ -3,7 +3,7 @@
 IMG ?= controller:latest
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.24.1
+ENVTEST_K8S_VERSION = 1.28.0
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -58,7 +58,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 .PHONY: addlicense
 addlicense: ## Add license headers to all go files.
-	find . -name '*.go' -exec go run github.com/google/addlicense -c 'OnMetal authors' {} +
+	find . -name '*.go' -exec go run github.com/google/addlicense -c 'IronCore authors' {} +
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -70,7 +70,7 @@ vet: ## Run go vet against code.
 
 .PHONY: checklicense
 checklicense: ## Check that every file has a license header present.
-	find . -name '*.go' -exec go run github.com/google/addlicense  -check -c 'OnMetal authors' {} +
+	find . -name '*.go' -exec go run github.com/google/addlicense  -check -c 'IronCore authors' {} +
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint against code.

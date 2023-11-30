@@ -1,31 +1,17 @@
 name: Lint Golang Codebase
 
 on:
-  pull_request_target:
+  pull_request:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
 jobs:
   golangci:
     name: lint
-    runs-on:
-      labels: self-hosted
-      group: organization/default
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/setup-go@v4
-        with:
-          go-version-file: go.mod
-      - run: ./hack/setup-git-redirect.sh
-        env:
-          GITHUB_PAT: ${{ secrets.BOT_PAT }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.1
-      - name: Delete git global config
-        if: always()
-        run: |
-          rm ~/.gitconfig
+          version: v1.55.2

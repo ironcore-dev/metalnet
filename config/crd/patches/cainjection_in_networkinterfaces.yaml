@@ -4,4 +4,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  name: networkinterfaces.networking.metalnet.onmetal.de
+  name: networkinterfaces.networking.metalnet.ironcore.dev

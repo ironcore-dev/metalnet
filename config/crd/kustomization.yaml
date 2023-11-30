@@ -2,9 +2,9 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/networking.metalnet.onmetal.de_networks.yaml
-- bases/networking.metalnet.onmetal.de_networkinterfaces.yaml
-- bases/networking.metalnet.onmetal.de_loadbalancers.yaml
+- bases/networking.metalnet.ironcore.dev_networks.yaml
+- bases/networking.metalnet.ironcore.dev_networkinterfaces.yaml
+- bases/networking.metalnet.ironcore.dev_loadbalancers.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

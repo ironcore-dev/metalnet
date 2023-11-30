@@ -27,18 +27,18 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/ironcore-dev/controller-utils/clientutils"
+	dpdk "github.com/ironcore-dev/dpservice-go/api"
+	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
+	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
+	dpdkproto "github.com/ironcore-dev/dpservice-go/proto"
+	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
+	metalnetclient "github.com/ironcore-dev/metalnet/client"
+	"github.com/ironcore-dev/metalnet/metalbond"
+	"github.com/ironcore-dev/metalnet/netfns"
+	"github.com/ironcore-dev/metalnet/sysfs"
 	"github.com/jaypipes/ghw"
-	"github.com/onmetal/controller-utils/clientutils"
 	"github.com/onmetal/metalbond/pb"
-	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
-	metalnetclient "github.com/onmetal/metalnet/client"
-	"github.com/onmetal/metalnet/metalbond"
-	"github.com/onmetal/metalnet/netfns"
-	"github.com/onmetal/metalnet/sysfs"
-	dpdk "github.com/onmetal/net-dpservice-go/api"
-	dpdkclient "github.com/onmetal/net-dpservice-go/client"
-	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
-	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,7 +55,7 @@ import (
 )
 
 const (
-	networkInterfaceFinalizer = "networking.metalnet.onmetal.de/networkInterface"
+	networkInterfaceFinalizer = "networking.metalnet.ironcore.dev/networkInterface"
 	defaultFirewallRulePrio   = 100
 	defaultFirewallRulePrefix = "0.0.0.0/0"
 )
@@ -122,11 +122,11 @@ type NetworkInterfaceReconciler struct {
 	PublicVNI int
 }
 
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networkinterfaces/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networkinterfaces/finalizers,verbs=update
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=networks,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.metalnet.onmetal.de,resources=loadbalancers,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces/finalizers,verbs=update
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networks,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=loadbalancers,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

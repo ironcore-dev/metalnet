@@ -12,7 +12,7 @@ rules:
   - create
   - patch
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - loadbalancers
   verbs:
@@ -24,13 +24,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - loadbalancers/finalizers
   verbs:
   - update
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - loadbalancers/status
   verbs:
@@ -38,7 +38,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - networkinterfaces
   verbs:
@@ -50,13 +50,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - networkinterfaces/finalizers
   verbs:
   - update
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - networkinterfaces/status
   verbs:
@@ -64,7 +64,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - networks
   verbs:
@@ -76,14 +76,14 @@ rules:
   - update
   - watch
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - networks/finalizers
   verbs:
   - patch
   - update
 - apiGroups:
-  - networking.metalnet.onmetal.de
+  - networking.metalnet.ironcore.dev
   resources:
   - networks/status
   verbs:

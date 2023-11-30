@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2022 IronCore authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ironcore-dev/metalnet/sysfs"
 	"github.com/jaypipes/ghw"
-	"github.com/onmetal/metalnet/sysfs"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 )

@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2022 IronCore authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package client
 import (
 	"context"
 
-	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
+	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

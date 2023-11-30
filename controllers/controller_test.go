@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"net/netip"
 
-	. "github.com/onmetal/onmetal-api/utils/testing"
+	. "github.com/ironcore-dev/ironcore/utils/testing"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,9 +30,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	metalnetv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
-	dpdkerrors "github.com/onmetal/net-dpservice-go/errors"
-	dpdk "github.com/onmetal/net-dpservice-go/proto"
+	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
+	dpdk "github.com/ironcore-dev/dpservice-go/proto"
+	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 

@@ -36,13 +36,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
+	dpdkproto "github.com/ironcore-dev/dpservice-go/proto"
+	networkingv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
+	"github.com/ironcore-dev/metalnet/internal"
+	"github.com/ironcore-dev/metalnet/metalbond"
+	"github.com/ironcore-dev/metalnet/netfns"
 	mb "github.com/onmetal/metalbond"
-	networkingv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
-	"github.com/onmetal/metalnet/internal"
-	"github.com/onmetal/metalnet/metalbond"
-	"github.com/onmetal/metalnet/netfns"
-	dpdkclient "github.com/onmetal/net-dpservice-go/client"
-	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -61,7 +61,7 @@ var (
 	metalnetDir        string = "/tmp/var/lib/metalnet"
 	netFnsManager      *netfns.Manager
 	conn               *grpc.ClientConn
-	dpdkProtoClient    dpdkproto.DPDKonmetalClient
+	dpdkProtoClient    dpdkproto.DPDKironcoreClient
 	dpdkClient         dpdkclient.Client
 	metalnetCache      *internal.MetalnetCache
 	metalnetMBClient   *metalbond.MetalnetClient
@@ -116,13 +116,13 @@ var _ = BeforeSuite(func() {
 	netFnsManager, err = netfns.NewManager(claimStore, initAvailable)
 	Expect(err).NotTo(HaveOccurred())
 
-	// setup net-dpservice client
+	// setup dpservice client
 	ctxGrpc, ctxCancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
 
 	conn, err = grpc.DialContext(ctxGrpc, dpserviceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	Expect(err).NotTo(HaveOccurred())
 
-	dpdkProtoClient = dpdkproto.NewDPDKonmetalClient(conn)
+	dpdkProtoClient = dpdkproto.NewDPDKironcoreClient(conn)
 	dpdkClient = dpdkclient.NewClient(dpdkProtoClient)
 
 	_, err = dpdkClient.Initialize(context.TODO())

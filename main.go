@@ -30,8 +30,8 @@ import (
 	"github.com/jaypipes/ghw"
 	flag "github.com/spf13/pflag"
 
-	metalnetclient "github.com/onmetal/metalnet/client"
-	"github.com/onmetal/metalnet/internal"
+	metalnetclient "github.com/ironcore-dev/metalnet/client"
+	"github.com/ironcore-dev/metalnet/internal"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -40,14 +40,14 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/onmetal/metalnet/metalbond"
-	"github.com/onmetal/metalnet/netfns"
-	"github.com/onmetal/metalnet/sysfs"
+	"github.com/ironcore-dev/metalnet/metalbond"
+	"github.com/ironcore-dev/metalnet/netfns"
+	"github.com/ironcore-dev/metalnet/sysfs"
 
+	dpdk "github.com/ironcore-dev/dpservice-go/api"
+	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
+	dpdkproto "github.com/ironcore-dev/dpservice-go/proto"
 	mb "github.com/onmetal/metalbond"
-	dpdk "github.com/onmetal/net-dpservice-go/api"
-	dpdkclient "github.com/onmetal/net-dpservice-go/client"
-	dpdkproto "github.com/onmetal/net-dpservice-go/proto"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -57,8 +57,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	networkingv1alpha1 "github.com/onmetal/metalnet/api/v1alpha1"
-	"github.com/onmetal/metalnet/controllers"
+	networkingv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
+	"github.com/ironcore-dev/metalnet/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -95,7 +95,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&nodeName, "node-name", hostName, "The node name to react to when reconciling network interfaces.")
-	flag.StringVar(&dpserviceAddr, "dp-service-address", "127.0.0.1:1337", "The address of net-dpservice.")
+	flag.StringVar(&dpserviceAddr, "dp-service-address", "127.0.0.1:1337", "The address of dpservice.")
 	flag.StringSliceVar(&metalbondPeers, "metalbond-peer", nil, "The addresses of the metalbond peers.")
 	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
 	flag.BoolVar(&tapDeviceMod, "tapdevice-mod", false, "Enable TAP device support")
@@ -137,7 +137,7 @@ func main() {
 		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       fmt.Sprintf("%s.metalnet.onmetal.de", nodeName),
+		LeaderElectionID:       fmt.Sprintf("%s.metalnet.ironcore.dev", nodeName),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -178,7 +178,7 @@ func main() {
 		}
 	}
 
-	// setup net-dpservice client
+	// setup dpservice client
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
@@ -193,7 +193,7 @@ func main() {
 		}
 	}()
 
-	dpdkProtoClient := dpdkproto.NewDPDKonmetalClient(conn)
+	dpdkProtoClient := dpdkproto.NewDPDKironcoreClient(conn)
 	dpdkClient := dpdkclient.NewClient(dpdkProtoClient)
 
 	metalnetCache := internal.NewMetalnetCache(&logger)

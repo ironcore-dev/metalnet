@@ -11,7 +11,7 @@ COPY go.sum go.sum
 
 COPY hack hack
 
-ENV GOPRIVATE='github.com/onmetal/*'
+ENV GOPRIVATE='github.com/ironcore-dev/*'
 
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer

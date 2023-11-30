@@ -1,7 +1,7 @@
 name: Pull Request Code test
 
 on:
-  pull_request_target:
+  pull_request:
     types: [ assigned, opened, synchronize, reopened ]
     paths-ignore:
       - 'docs/**'
@@ -17,7 +17,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - name: Download metalbond using the script
-        run: ./hack/rel_download.sh -dir=build -owner=onmetal -repo=metalbond -pat=${{ secrets.BOT_PAT }}
+        run: ./hack/rel_download.sh -dir=build -owner=ironcore-dev -repo=metalbond -pat=${{ secrets.BOT_PAT }}
 
       - name: Install metalbond
         run: sudo dpkg -i build/metalbond*.deb
@@ -26,7 +26,7 @@ jobs:
         run: metalbond server --listen [::1]:4711 --http [::1]:4712 --keepalive 3 &
 
       - name: Run dp-service
-        run: docker run --rm --entrypoint ./dp_service.py --privileged -p1337:1337 --mount type=bind,source=/dev/hugepages,target=/dev/hugepages ghcr.io/onmetal/dp-service-tester --no-init &
+        run: docker run --rm --entrypoint ./dp_service.py --privileged -p1337:1337 --mount type=bind,source=/dev/hugepages,target=/dev/hugepages ghcr.io/ironcore-dev/dpservice-tester --no-init &
 
       - uses: actions/setup-go@v4
         with:
