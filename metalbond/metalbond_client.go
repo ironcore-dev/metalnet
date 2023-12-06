@@ -26,9 +26,9 @@ import (
 	dpdk "github.com/ironcore-dev/dpservice-go/api"
 	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
 	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
+	mb "github.com/ironcore-dev/metalbond"
+	mbproto "github.com/ironcore-dev/metalbond/pb"
 	"github.com/ironcore-dev/metalnet/internal"
-	mb "github.com/onmetal/metalbond"
-	mbproto "github.com/onmetal/metalbond/pb"
 )
 
 type ClientOptions struct {

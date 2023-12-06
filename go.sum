@@ -77,6 +77,8 @@ github.com/ironcore-dev/dpservice-go v0.1.21-0.20231130135153-8d59ae87e3ab h1:vb
 github.com/ironcore-dev/dpservice-go v0.1.21-0.20231130135153-8d59ae87e3ab/go.mod h1:EUoSQj86sq5YCQMzkOj2RzdWJx+RF9A52nDwO+mA6RM=
 github.com/ironcore-dev/ironcore v0.1.2-0.20231130105619-82b2d4e911ad h1:n7fk+Ep1IodKbJ1umJwYk/HyUGmHeywZsxRGUdVJRHw=
 github.com/ironcore-dev/ironcore v0.1.2-0.20231130105619-82b2d4e911ad/go.mod h1:UPp+izBNxBhgVa0ts6TxhgV9yFkFVy6+d2T9fsi92uY=
+github.com/ironcore-dev/metalbond v0.3.5-0.20231206085002-cbb83f888414 h1:LO3718CUYPD6SRtiUPZikOp2egIz98irZPcXFjkaCNY=
+github.com/ironcore-dev/metalbond v0.3.5-0.20231206085002-cbb83f888414/go.mod h1:7nSt4UIQewhJQVjVAcslg9LldwLdlADgMAqhXSkGH04=
 github.com/jaypipes/ghw v0.12.0 h1:xU2/MDJfWmBhJnujHY9qwXQLs3DBsf0/Xa9vECY0Tho=
 github.com/jaypipes/ghw v0.12.0/go.mod h1:jeJGbkRB2lL3/gxYzNYzEDETV1ZJ56OKr+CSeSEym+g=
 github.com/jaypipes/pcidb v1.0.0 h1:vtZIfkiCUE42oYbJS0TAq9XSfSmcsgo9IdxSm9qzYU8=
@@ -109,8 +111,6 @@ github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9G
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
-github.com/onmetal/metalbond v0.3.4 h1:4mp0jbi5bhxyGGGYGBtYMPMHxsxCPkwEJd8478NO+bs=
-github.com/onmetal/metalbond v0.3.4/go.mod h1:eAMo2+Ph4nQo1RJSV8813Hoafwpdk8E/uZAHhAXbIkg=
 github.com/onsi/ginkgo/v2 v2.13.2 h1:Bi2gGVkfn6gQcjNjZJVO8Gf0FHzMPf2phUei9tejVMs=
 github.com/onsi/ginkgo/v2 v2.13.2/go.mod h1:XStQ8QcGwLyF4HdfcZB8SFOS/MWCgDuXMSBe6zrvLgM=
 github.com/onsi/gomega v1.30.0 h1:hvMK7xYz4D3HapigLTeGdId/NcfQx1VHMJc60ew99+8=

@@ -19,8 +19,8 @@ import (
 	"net/netip"
 	"sync"
 
-	"github.com/onmetal/metalbond"
-	"github.com/onmetal/metalbond/pb"
+	"github.com/ironcore-dev/metalbond"
+	"github.com/ironcore-dev/metalbond/pb"
 )
 
 type DefaultRouteOperation int

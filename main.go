@@ -47,7 +47,7 @@ import (
 	dpdk "github.com/ironcore-dev/dpservice-go/api"
 	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
 	dpdkproto "github.com/ironcore-dev/dpservice-go/proto"
-	mb "github.com/onmetal/metalbond"
+	mb "github.com/ironcore-dev/metalbond"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

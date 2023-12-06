@@ -8,7 +8,6 @@ require (
 	github.com/ironcore-dev/dpservice-go v0.1.21-0.20231130135153-8d59ae87e3ab
 	github.com/ironcore-dev/ironcore v0.1.2-0.20231130105619-82b2d4e911ad
 	github.com/jaypipes/ghw v0.12.0
-	github.com/onmetal/metalbond v0.3.4
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/sirupsen/logrus v1.9.3
@@ -46,6 +45,7 @@ require (
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
+	github.com/ironcore-dev/metalbond v0.3.5-0.20231206085002-cbb83f888414 // indirect
 	github.com/jaypipes/pcidb v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

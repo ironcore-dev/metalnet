@@ -38,11 +38,11 @@ import (
 
 	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
 	dpdkproto "github.com/ironcore-dev/dpservice-go/proto"
+	mb "github.com/ironcore-dev/metalbond"
 	networkingv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	"github.com/ironcore-dev/metalnet/internal"
 	"github.com/ironcore-dev/metalnet/metalbond"
 	"github.com/ironcore-dev/metalnet/netfns"
-	mb "github.com/onmetal/metalbond"
 	//+kubebuilder:scaffold:imports
 )
 
