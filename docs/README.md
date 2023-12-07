@@ -6,7 +6,7 @@
 * [Contribution guide](./development/contribution.md)
 
 ## API references
-* [`networking.ironcore-dev.de` API Group](./api-reference/networking.md)
+* [`networking.ironcore.dev` API Group](./api-reference/networking.md)
 
 ## CRD usage
 * [Usage](./usage/crd_usage.md)

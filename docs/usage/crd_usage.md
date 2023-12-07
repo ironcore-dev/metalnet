@@ -3,7 +3,7 @@
 This section provides an overview of how Custom Resource Definitions (CRDs) proposed in this project is used.
 
 ## API references
-* [`networking.ironcore-dev.de` API Group](./api-reference/networking.md)
+* [`networking.ironcore-dev` API Group](./api-reference/networking.md)
 
 ## Resource examples
 
