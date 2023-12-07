@@ -85,8 +85,16 @@ checklicense: ## Check that every file has a license header present.
 lint: golangci-lint ## Run golangci-lint against code.
 	$(GOLANGCILINT) run ./...
 
+.PHONY: add-license
+add-license: addlicense ## Add license headers to all go files.
+	find . -name '*.go' -exec $(ADDLICENSE) -f hack/license-header.txt {} +
+
+.PHONY: check-license
+check-license: addlicense ## Check that every file has a license header present.
+	find . -name '*.go' -exec $(ADDLICENSE) -check -c 'IronCore authors' {} +
+
 .PHONY: check
-check: manifests generate fmt addlicense lint test ## Generate manifests, code, lint, add licenses, test
+check: manifests generate fmt check-license lint test ## Generate manifests, code, lint, add licenses, test
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 .PHONY: test
@@ -152,11 +160,13 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCILINT ?= $(LOCALBIN)/golangci-lint
+ADDLICENSE ?= $(LOCALBIN)/addlicense
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.13.0
-GOLANGCILINT_VERSION ?= v1.55.1
+GOLANGCILINT_VERSION ?= v1.55.2
+ADDLICENSE_VERSION ?= v1.1.1
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -168,6 +178,11 @@ $(KUSTOMIZE): $(LOCALBIN)
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: addlicense
+addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
+$(ADDLICENSE): $(LOCALBIN)
+	test -s $(LOCALBIN)/addlicense || GOBIN=$(LOCALBIN) go install github.com/google/addlicense@$(ADDLICENSE_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
