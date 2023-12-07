@@ -30,10 +30,10 @@ make test
 If automation tests fails or gets panic during execution, the interface claiming file under repository `/tmp/var/lib/metalnet` could be residual on the disk. Thus, if the following error appears, consider removing the files under this repository.
 
 ```
-[FAILED] in [BeforeSuite] - /home/tli/go/src/github.com/onmetal/metalnet/controllers/suite_test.go:111 @ 12/01/23 13:59:41.01
+[FAILED] in [BeforeSuite] - /home/tli/go/src/github.com/ironcore/metalnet/controllers/suite_test.go:111 @ 12/01/23 13:59:41.01
 [BeforeSuite] [FAILED] [4.845 seconds]
 [BeforeSuite] 
-/home/tli/go/src/github.com/onmetal/metalnet/controllers/suite_test.go:79
+/home/tli/go/src/github.com/ironcore/metalnet/controllers/suite_test.go:79
 
   [FAILED] Unexpected error:
       <*errors.errorString | 0xc0005aa530>: 
@@ -42,7 +42,7 @@ If automation tests fails or gets panic during execution, the interface claiming
           s: "claim 5e4c2887-19fe-4295-bba7-c4476d566a3f cannot claim non-existent address ::::net_tap5..",
       }
   occurred
-  In [BeforeSuite] at: /home/tli/go/src/github.com/onmetal/metalnet/controllers/suite_test.go:111 @ 12/01/23 13:59:41.01
+  In [BeforeSuite] at: /home/tli/go/src/github.com/ironcore/metalnet/controllers/suite_test.go:111 @ 12/01/23 13:59:41.01
 ```
 
 

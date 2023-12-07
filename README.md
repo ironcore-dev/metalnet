@@ -6,10 +6,10 @@
 <img src="docs/assets/logo.svg" alt="IronCore Logo" width="200" />
 
 # Metalnet
-Metalnet is a stack of kubernetes controller applications to fulfill the requirements on creating functional virtual network elements, by interactiving with our other software components such as [metalbond](https://github.com/ironcore-dev/metalbond) and [dp-service](https://github.com/ironcore-dev/net-dpservice). It manages the lifecycles of virtual network related kubernetes objects, to ensure successful communication for virtual machines.
+Metalnet is a stack of kubernetes controller applications to fulfill the requirements on creating functional virtual network elements, by interacting with our other software components such as [metalbond](https://github.com/ironcore-dev/metalbond) and [dp-service](https://github.com/ironcore-dev/net-dpservice). It manages the lifecycles of virtual network related kubernetes objects, to ensure successful communication for virtual machines.
 
 ## Use and develop metalnet
-Please see our documentation in the [`/docs`](./docs) folder for more details.
+Please see the documentation in the [`/docs`](./docs) folder for more details.
 
 ## License
 Licensed under the Apache License, Version 2.0 (the "License");
