@@ -1,4 +1,4 @@
-<img src="docs/assets/logo.svg" alt="IronCore Logo" width="200" />
+<img src="https://github.com/ironcore-dev/ironcore/blob/main/docs/assets/logo.svg" alt="IronCore Logo" width="200" />
 
 # metalnet
 
