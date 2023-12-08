@@ -6,7 +6,7 @@ This section describes necessary steps to setup a test environment for running a
 * `go` >= 1.20
 * `git`, `make` and `kubectl`
 * [metalbond](https://github.com/ironcore-dev/metalbond)
-* [dp-service](https://github.com/ironcore-dev/net-dpservice)
+* [dp-service](https://github.com/ironcore-dev/dpservice)
 
 ## Metalbond and dp-service
 To start metalbond server, we use the following command. Switch to metalbond's repo and run

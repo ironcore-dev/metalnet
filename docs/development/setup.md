@@ -8,7 +8,7 @@ This section describes necessary steps to setup a development environment for te
 * Access to a Kubernetes cluster ([Minikube](https://minikube.sigs.k8s.io/docs/), [kind](https://kind.sigs.k8s.io/) or a
   real cluster). We also provide detailed [guidance](./kind_install.md) on setting up a kind cluster for local development.
 * [metalbond](https://github.com/ironcore-dev/metalbond) We need to setup a metalbond server that is responsible of managing overlay routes in a network. Metalnet establishes a connection with it during the initialization.
-* [dp-service](https://github.com/ironcore-dev/net-dpservice) We need to start a dp-service process that reacts to the gRPC calls generated from metalbond.
+* [dp-service](https://github.com/ironcore-dev/dpservice) We need to start a dp-service process that reacts to the gRPC calls generated from metalbond.
 
 
 ## Metalbond and dp-service
