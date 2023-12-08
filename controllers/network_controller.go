@@ -78,7 +78,7 @@ func (r *NetworkReconciler) delete(ctx context.Context, log logr.Logger, network
 	log.V(1).Info("Delete")
 
 	if !controllerutil.ContainsFinalizer(network, r.networkFinalizer()) {
-		log.V(1).Info("No finalizer present, nothing to do.")
+		log.V(1).Info("No  finalizer present, nothing to do.")
 		return ctrl.Result{}, nil
 	}
 
