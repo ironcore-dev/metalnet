@@ -17,7 +17,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - name: Download metalbond using the script
-        run: ./hack/rel_download.sh -dir=build -owner=ironcore-dev -repo=metalbond -pat=${{ secrets.BOT_PAT }}
+        run: ./hack/rel_download.sh -dir=build -owner=ironcore-dev -repo=metalbond -pat=${{ secrets.GITHUB_TOKEN }}
 
       - name: Install metalbond
         run: sudo dpkg -i build/metalbond*.deb
@@ -31,15 +31,6 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
-      - run: |
-          mkdir -p ~/.ssh
-          for key in rsa ecdsa ed25519; do
-            ssh-keyscan -t $key github.com 2>/dev/null >> ~/.ssh/known_hosts
-          done
-      - uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.BOT_PRIVATE_KEY }}
-      - run: ./hack/setup-git-redirect.sh
       - run: make test
       - name: Delete git global config
         if: always()
