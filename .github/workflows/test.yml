@@ -38,7 +38,7 @@ jobs:
       - name: Delete git global config
         if: always()
         run: |
-          rm ~/.gitconfig
+          rm -f ~/.gitconfig
       - name: Cleanup services
         if: always()
         run: |
