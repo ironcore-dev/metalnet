@@ -31,7 +31,7 @@ jobs:
       - name: Run wait for tcp port
         run: timeout 10 bash -c 'until echo > /dev/tcp/localhost/1337 2>/dev/null; do sleep 1; done' 2>/dev/null
 
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - run: make test
