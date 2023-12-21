@@ -3,7 +3,7 @@ module github.com/ironcore-dev/metalnet
 go 1.21
 
 require (
-	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/logr v1.4.0
 	github.com/ironcore-dev/controller-utils v0.9.0
 	github.com/ironcore-dev/dpservice-go v0.3.0
 	github.com/ironcore-dev/ironcore v0.1.2-0.20231130105619-82b2d4e911ad
