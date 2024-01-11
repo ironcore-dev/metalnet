@@ -18,13 +18,13 @@ type NetworkInterfaceSpec struct {
 	// Only one IP supported at the moment.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:MaxItems=2
 	IPFamilies []corev1.IPFamily `json:"ipFamilies"`
 	// IPs are the provided IPs or EphemeralIPs which should be assigned to this NetworkInterface
 	// Only one IP supported at the moment.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=1
+	// +kubebuilder:validation:MaxItems=2
 	IPs []IP `json:"ips"`
 	// Virtual IP
 	VirtualIP *IP `json:"virtualIP,omitempty"`

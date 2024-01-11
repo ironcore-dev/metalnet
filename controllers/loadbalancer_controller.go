@@ -45,8 +45,9 @@ type LoadBalancerReconciler struct {
 	MetalnetCache *internal.MetalnetCache
 	RouteUtil     metalbond.RouteUtil
 
-	NodeName  string
-	PublicVNI int
+	NodeName          string
+	PublicVNI         int
+	EnableIPv6Support bool
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=loadbalancers,verbs=get;list;watch;create;update;patch;delete

@@ -72,6 +72,7 @@ func main() {
 	var metalbondPeers []string
 	var metalbondDebug bool
 	var tapDeviceMod bool
+	var enableIPv6Support bool
 	var routerAddress net.IP
 	var publicVNI int
 	var metalnetDir string
@@ -86,6 +87,7 @@ func main() {
 	flag.StringSliceVar(&metalbondPeers, "metalbond-peer", nil, "The addresses of the metalbond peers.")
 	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
 	flag.BoolVar(&tapDeviceMod, "tapdevice-mod", false, "Enable TAP device support")
+	flag.BoolVar(&enableIPv6Support, "enable-ipv6", false, "Enable IPv6 support")
 	flag.IntVar(&publicVNI, "public-vni", 100, "Virtual network identifier used for public routing announcements.")
 	flag.IPVar(&routerAddress, "router-address", net.IP{}, "The address of the next router.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -286,34 +288,37 @@ func main() {
 		MetalnetMBClient:  metalnetMBClient,
 		DefaultRouterAddr: &defaultRouterAddr,
 		NodeName:          nodeName,
+		EnableIPv6Support: enableIPv6Support,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Network")
 		os.Exit(1)
 	}
 	if err = (&controllers.NetworkInterfaceReconciler{
-		Client:        mgr.GetClient(),
-		EventRecorder: mgr.GetEventRecorderFor("networkinterface"),
-		Scheme:        mgr.GetScheme(),
-		DPDK:          dpdkclient.NewClient(dpdkProtoClient),
-		RouteUtil:     metalbondRouteUtil,
-		NetFnsManager: netFnsManager,
-		SysFS:         sysFS,
-		NodeName:      nodeName,
-		PublicVNI:     publicVNI,
+		Client:            mgr.GetClient(),
+		EventRecorder:     mgr.GetEventRecorderFor("networkinterface"),
+		Scheme:            mgr.GetScheme(),
+		DPDK:              dpdkclient.NewClient(dpdkProtoClient),
+		RouteUtil:         metalbondRouteUtil,
+		NetFnsManager:     netFnsManager,
+		SysFS:             sysFS,
+		NodeName:          nodeName,
+		PublicVNI:         publicVNI,
+		EnableIPv6Support: enableIPv6Support,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkInterface")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.LoadBalancerReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("loadbalancer"),
-		DPDK:          dpdkclient.NewClient(dpdkProtoClient),
-		RouteUtil:     metalbondRouteUtil,
-		MetalnetCache: metalnetCache,
-		NodeName:      nodeName,
-		PublicVNI:     publicVNI,
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		EventRecorder:     mgr.GetEventRecorderFor("loadbalancer"),
+		DPDK:              dpdkclient.NewClient(dpdkProtoClient),
+		RouteUtil:         metalbondRouteUtil,
+		MetalnetCache:     metalnetCache,
+		NodeName:          nodeName,
+		PublicVNI:         publicVNI,
+		EnableIPv6Support: enableIPv6Support,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LoadBalancer")
 		os.Exit(1)

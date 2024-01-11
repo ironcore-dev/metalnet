@@ -47,6 +47,7 @@ type NetworkReconciler struct {
 
 	DefaultRouterAddr *metalbond.DefaultRouterAddress
 	NodeName          string
+	EnableIPv6Support bool
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networks,verbs=get;list;watch;create;update;patch;delete
@@ -154,7 +155,7 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 	log.V(1).Info("Checked existence of the VNI")
 
 	log.V(1).Info("Creating dpdk default route if not exists")
-	if err := r.createDefaultRouteIfNotExists(ctx, vni); err != nil {
+	if err := r.createDefaultRoutesIfNotExist(ctx, vni); err != nil {
 		return ctrl.Result{}, err
 	}
 	log.V(1).Info("Created dpdk default route if not existed")
@@ -174,8 +175,9 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 	return ctrl.Result{}, nil
 }
 
-func (r *NetworkReconciler) createDefaultRouteIfNotExists(ctx context.Context, vni uint32) error {
+func (r *NetworkReconciler) createDefaultRoutesIfNotExist(ctx context.Context, vni uint32) error {
 	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
+	defaultIPv6RoutePrefix := netip.MustParsePrefix("::/0")
 	r.DefaultRouterAddr.RWMutex.RLock()
 	defer r.DefaultRouterAddr.RWMutex.RUnlock()
 
@@ -197,20 +199,50 @@ func (r *NetworkReconciler) createDefaultRouteIfNotExists(ctx context.Context, v
 	},
 		dpdkerrors.Ignore(dpdkerrors.ROUTE_EXISTS),
 	); err != nil {
-		return fmt.Errorf("error creating route: %w", err)
+		return fmt.Errorf("error creating ipv4 route: %w", err)
+	}
+
+	if r.EnableIPv6Support {
+		if _, err := r.DPDK.CreateRoute(ctx, &dpdk.Route{
+			RouteMeta: dpdk.RouteMeta{
+				VNI: vni,
+			},
+			Spec: dpdk.RouteSpec{
+				Prefix: &defaultIPv6RoutePrefix,
+				NextHop: &dpdk.RouteNextHop{
+					VNI: vni,
+					IP:  &r.DefaultRouterAddr.RouterAddress,
+				},
+			},
+		},
+			dpdkerrors.Ignore(dpdkerrors.ROUTE_EXISTS),
+		); err != nil {
+			return fmt.Errorf("error creating ipv6 route: %w", err)
+		}
 	}
 	return nil
 }
 
 func (r *NetworkReconciler) deleteDefaultRouteIfExists(ctx context.Context, vni uint32) error {
 	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
+	defaultIPv6RoutePrefix := netip.MustParsePrefix("::/0")
 	if _, err := r.DPDK.DeleteRoute(
 		ctx,
 		vni,
 		&defaultRoutePrefix,
 		dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND),
 	); err != nil {
-		return fmt.Errorf("error deleting route: %w", err)
+		return fmt.Errorf("error deleting ipv4 route: %w", err)
+	}
+	if r.EnableIPv6Support {
+		if _, err := r.DPDK.DeleteRoute(
+			ctx,
+			vni,
+			&defaultIPv6RoutePrefix,
+			dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND),
+		); err != nil {
+			return fmt.Errorf("error deleting ipv6 route: %w", err)
+		}
 	}
 	return nil
 }

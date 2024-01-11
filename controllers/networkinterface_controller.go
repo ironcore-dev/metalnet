@@ -5,7 +5,6 @@ package controllers
 
 import (
 	"context"
-	crand "crypto/rand"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -30,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,28 +45,14 @@ const (
 	defaultFirewallRulePrefix = "0.0.0.0/0"
 )
 
-// workaroundNoNetworkInterfaceIPV6 is a workaround to only use ipv4 addresses.
-// remove as soon as bug is fixed.
-func workaroundNoNetworkInterfaceIPV6(ips []netip.Addr) []netip.Addr {
+func filterNotSetIps(ips []netip.Addr) []netip.Addr {
 	var res []netip.Addr
 	for _, ip := range ips {
-		if ip.Is4() {
+		if ip.IsValid() {
 			res = append(res, ip)
 		}
 	}
 	return res
-}
-
-func workaroundRequiredIPv6Address(ip netip.Addr) netip.Addr {
-	if ip.IsValid() {
-		return ip
-	}
-
-	var data [16]byte
-	_, err := crand.Read(data[:])
-	utilruntime.Must(err)
-
-	return netip.AddrFrom16(data)
 }
 
 func getIP(ipFamily corev1.IPFamily, ipFamilies []corev1.IPFamily, ips []metalnetv1alpha1.IP) netip.Addr {
@@ -105,8 +89,9 @@ type NetworkInterfaceReconciler struct {
 	NetFnsManager *netfns.Manager
 	SysFS         sysfs.FS
 
-	NodeName  string
-	PublicVNI int
+	NodeName          string
+	PublicVNI         int
+	EnableIPv6Support bool
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
@@ -1169,7 +1154,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 		log.V(1).Info("Creating dpdk interface")
 
 		primaryIpv4 := getNetworkInterfaceIP(corev1.IPv4Protocol, nic)
-		primaryIpv6 := workaroundRequiredIPv6Address(getNetworkInterfaceIP(corev1.IPv6Protocol, nic))
+		primaryIpv6 := getNetworkInterfaceIP(corev1.IPv6Protocol, nic)
 
 		iface, err := r.DPDK.CreateInterface(ctx, &dpdk.Interface{
 			InterfaceMeta: dpdk.InterfaceMeta{ID: string(nic.UID)},
@@ -1184,7 +1169,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 			return nil, netip.Addr{}, false, fmt.Errorf("error creating dpdk interface: %w", err)
 		}
 		log.V(1).Info("Adding interface routes if not exist")
-		ips := workaroundNoNetworkInterfaceIPV6(getNetworkInterfaceIPs(nic))
+		ips := filterNotSetIps(getNetworkInterfaceIPs(nic))
 		if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
 			return nil, netip.Addr{}, false, err
 		}
@@ -1202,7 +1187,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 	log.V(1).Info("Got pci device for uid", "PCIDevice", addr)
 
 	log.V(1).Info("Adding interface route if not exists")
-	ips := workaroundNoNetworkInterfaceIPV6(getNetworkInterfaceIPs(nic))
+	ips := filterNotSetIps(getNetworkInterfaceIPs(nic))
 	if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
 		return nil, netip.Addr{}, false, err
 	}
@@ -1477,7 +1462,7 @@ func (r *NetworkInterfaceReconciler) deleteInterface(
 	underlayRoute netip.Addr,
 ) error {
 	log.V(1).Info("Removing interface route if exists")
-	ips := workaroundNoNetworkInterfaceIPV6(getNetworkInterfaceIPs(nic))
+	ips := filterNotSetIps(getNetworkInterfaceIPs(nic))
 	if err := r.removeInterfaceRoutesIfExist(ctx, vni, ips, underlayRoute); err != nil {
 		return err
 	}

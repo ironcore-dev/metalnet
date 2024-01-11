@@ -171,7 +171,7 @@ spec:
                     type is used to express the family of an IP expressed by a type
                     (e.g. service.spec.ipFamilies).
                   type: string
-                maxItems: 1
+                maxItems: 2
                 minItems: 1
                 type: array
               ips:
@@ -180,7 +180,7 @@ spec:
                   moment.
                 items:
                   type: string
-                maxItems: 1
+                maxItems: 2
                 minItems: 1
                 type: array
               loadBalancerTargets:

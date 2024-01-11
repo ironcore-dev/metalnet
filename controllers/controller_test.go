@@ -183,10 +183,13 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 							Name: "test-network",
 						},
 						NodeName:   &testNode,
-						IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+						IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
 						IPs: []metalnetv1alpha1.IP{
 							{
 								Addr: netip.MustParseAddr("10.0.0.1"),
+							},
+							{
+								Addr: netip.MustParseAddr("fd00::1"),
 							},
 						},
 					},
@@ -204,6 +207,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 
 				Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("test-network"))
 				Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.1"))
+				Expect(createdNetworkInterface.Spec.IPs[1].Addr.String()).To(Equal("fd00::1"))
 
 				// It should not yet be created in dpservice
 				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
@@ -229,6 +233,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(iface.Spec.IPv4.String()).To(Equal("10.0.0.1"))
+				Expect(iface.Spec.IPv6.String()).To(Equal("fd00::1"))
 				Expect(iface.InterfaceMeta.ID).To(Equal(string(fetchedIface.UID)))
 
 				// Fetch the VNI object from dpservice
