@@ -294,16 +294,15 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.NetworkInterfaceReconciler{
-		Client:            mgr.GetClient(),
-		EventRecorder:     mgr.GetEventRecorderFor("networkinterface"),
-		Scheme:            mgr.GetScheme(),
-		DPDK:              dpdkclient.NewClient(dpdkProtoClient),
-		RouteUtil:         metalbondRouteUtil,
-		NetFnsManager:     netFnsManager,
-		SysFS:             sysFS,
-		NodeName:          nodeName,
-		PublicVNI:         publicVNI,
-		EnableIPv6Support: enableIPv6Support,
+		Client:        mgr.GetClient(),
+		EventRecorder: mgr.GetEventRecorderFor("networkinterface"),
+		Scheme:        mgr.GetScheme(),
+		DPDK:          dpdkclient.NewClient(dpdkProtoClient),
+		RouteUtil:     metalbondRouteUtil,
+		NetFnsManager: netFnsManager,
+		SysFS:         sysFS,
+		NodeName:      nodeName,
+		PublicVNI:     publicVNI,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkInterface")
 		os.Exit(1)

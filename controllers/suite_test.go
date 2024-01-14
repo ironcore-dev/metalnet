@@ -53,6 +53,7 @@ var (
 	metalnetCache      *internal.MetalnetCache
 	metalnetMBClient   *metalbond.MetalnetClient
 	metalbondRouteUtil *metalbond.MBRouteUtil
+	enableIPv6Support  bool = true
 )
 
 var defaultRouterAddr metalbond.DefaultRouterAddress = metalbond.DefaultRouterAddress{

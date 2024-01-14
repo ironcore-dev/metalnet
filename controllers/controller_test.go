@@ -809,6 +809,153 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 			})
 		})
 	})
+
+	Context("Loadbalancer", Label("lb", "loadbalancer"), Ordered, func() {
+		When("creating an ipv6 Loadbalancer", func() {
+			It("should create successfully", func() {
+				// Defining and Creating Network is done in BeforeEach()
+
+				// Define a new Loadbalancer object
+				loadBalancer = &metalnetv1alpha1.LoadBalancer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ipv6-loadbalancer",
+						Namespace: ns.Name,
+					},
+					Spec: metalnetv1alpha1.LoadBalancerSpec{
+						NetworkRef: corev1.LocalObjectReference{Name: "test-network"},
+						LBtype:     "Public",
+						IPFamily:   corev1.IPv6Protocol,
+						IP: metalnetv1alpha1.IP{
+							Addr: netip.MustParseAddr("dede::01"),
+						},
+						Ports: []metalnetv1alpha1.LBPort{
+							{Protocol: "TCP", Port: 80},
+							{Protocol: "UDP", Port: 80},
+						},
+						NodeName: &testNode,
+					},
+				}
+
+				// Create the LoadBalancer object in k8s
+				Expect(k8sClient.Create(ctx, loadBalancer)).To(Succeed())
+
+				// Ensure it's created
+				createdLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: ns.Name,
+					Name:      "test-ipv6-loadbalancer",
+				}, createdLB)).To(Succeed())
+
+				// requested LB and created LB should match
+				Expect(createdLB).To(Equal(loadBalancer))
+
+				// Finalizers should not yet be created
+				Expect(createdLB.GetFinalizers()).To(BeNil())
+
+				// LB should not yet be created in dpservice
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail when already existing", func() {
+				Expect(k8sClient.Create(ctx, loadBalancer)).ToNot(Succeed())
+			})
+
+			It("should reconcile successfully", func() {
+				// Create and initialize loadbalancer reconciler
+				Expect(lbReconcile(ctx, *loadBalancer)).To(Succeed())
+
+				// Fetch the updated LB object from k8s
+				fetchedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      loadBalancer.Name,
+					Namespace: loadBalancer.Namespace,
+				}, fetchedLB)).To(Succeed())
+
+				Expect(fetchedLB.GetFinalizers()).ToNot(BeZero())
+				Expect(fetchedLB.Status.State).To(Equal(metalnetv1alpha1.LoadBalancerStateReady))
+
+				// Fetch the LB object from dpservice
+				dpdkLB, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).ToNot(HaveOccurred())
+
+				// LB parameters in k8s and dpservice should match
+				Expect(fetchedLB.Spec.IP.As16()).To(Equal(dpdkLB.Spec.LbVipIP.As16()))
+				Expect(fetchedLB.Spec.Ports[0].Port).To(Equal(int32(dpdkLB.Spec.Lbports[0].Port)))
+
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV6))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeTrue())
+				// Another reconcilition of network object is needed here. Because we dont have event watches in the test environment.
+			})
+
+			It("should update successfully", func() {
+				// Update loadbalancer k8s object
+				patchLB := loadBalancer.DeepCopy()
+				patchLB.Spec.IP = metalnetv1alpha1.IP{
+					Addr: netip.MustParseAddr("dede::2"),
+				}
+				Expect(k8sClient.Patch(ctx, patchLB, client.MergeFrom(loadBalancer))).To(Succeed())
+
+				Expect(lbReconcile(ctx, *loadBalancer)).To(Succeed())
+
+				// Fetch updated k8s loadbalancer object
+				updatedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      loadBalancer.Name,
+					Namespace: loadBalancer.Namespace,
+				}, updatedLB)).To(Succeed())
+
+				Expect(updatedLB.Spec.IP.Addr.String()).To(Equal("dede::2"))
+			})
+		})
+
+		When("deleting a Loadbalancer", Label("lb"), Ordered, func() {
+			It("should delete successfully", func() {
+				// Delete the Loadbalancer object from k8s
+				Expect(k8sClient.Delete(ctx, loadBalancer)).To(Succeed())
+
+				// Ensure it's deleted
+				deletedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Namespace: ns.Name,
+					Name:      loadBalancer.Name,
+				}, deletedLB)).ToNot(Succeed())
+
+				// LB should still be in dpservice
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).ToNot(HaveOccurred())
+
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeTrue())
+			})
+
+			It("should reconcile successfully after delete", func() {
+				// Create and initialize loadbalancer reconciler
+				Expect(lbReconcile(ctx, *loadBalancer)).To(Succeed())
+
+				// Fetch the deleted LB object from k8s
+				fetchedLB := &metalnetv1alpha1.LoadBalancer{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      loadBalancer.Name,
+					Namespace: loadBalancer.Namespace,
+				}, fetchedLB)).ToNot(Succeed())
+
+				// Fetch the deleted LB object from dpservice
+				lb, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				Expect(err).To(HaveOccurred())
+				Expect(lb.Status.Code).To(Equal(uint32(dpdkerrors.NOT_FOUND)))
+
+				// Fetch the VNI object from dpservice
+				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vniAvail.Spec.InUse).To(BeFalse())
+			})
+		})
+	})
 })
 
 var _ = Describe("Negative cases", Label("negative"), func() {
@@ -1256,32 +1403,6 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 
 	When("creating a Loadbalancer with wrong data", Label("lb"), func() {
 		It("should fail", func() {
-			By("using IPv6 address")
-			// set wrong IP (IPv6 is not supported yet)
-			wrongLoadBalancer.Spec.IP = metalnetv1alpha1.IP{
-				Addr: netip.MustParseAddr("ff80::1"),
-			}
-
-			// Create the LoadBalancer object in k8s
-			Expect(k8sClient.Create(ctx, wrongLoadBalancer)).To(Succeed())
-
-			// Ensure it's created
-			createdLB := &metalnetv1alpha1.LoadBalancer{}
-			Expect(k8sClient.Get(ctx, client.ObjectKey{
-				Namespace: ns.Name,
-				Name:      "wrong-test-loadbalancer",
-			}, createdLB)).To(Succeed())
-
-			Expect(lbReconcile(ctx, *wrongLoadBalancer)).ToNot(Succeed())
-
-			Expect(k8sClient.Delete(ctx, wrongLoadBalancer)).To(Succeed())
-
-			Expect(lbReconcile(ctx, *wrongLoadBalancer)).To(Succeed())
-		})
-	})
-
-	When("creating a Loadbalancer with wrong data", Label("lb"), func() {
-		It("should fail", func() {
 			By("no LB ports specified")
 			// empty LB ports
 			wrongLoadBalancer.Spec.Ports = []metalnetv1alpha1.LBPort{}
@@ -1407,6 +1528,7 @@ func networkReconcile(ctx context.Context, network metalnetv1alpha1.Network) err
 		MetalnetMBClient:  metalnetMBClient,
 		DefaultRouterAddr: &defaultRouterAddr,
 		NodeName:          testNode,
+		EnableIPv6Support: enableIPv6Support,
 	}
 
 	// Loop the reconciler until Requeue is false or error occurs
@@ -1441,7 +1563,7 @@ func ifaceReconcile(ctx context.Context, networkInterface metalnetv1alpha1.Netwo
 		RouteUtil:     metalbondRouteUtil,
 		NodeName:      testNode,
 		NetFnsManager: netFnsManager,
-		PublicVNI:     100,
+		PublicVNI:     int(defaultRouterAddr.PublicVNI),
 	}
 
 	// Loop the reconciler until Requeue is false or error occurs
@@ -1469,13 +1591,14 @@ func lbReconcile(ctx context.Context, loadBalancer metalnetv1alpha1.LoadBalancer
 	GinkgoHelper()
 
 	reconciler := &LoadBalancerReconciler{
-		Client:        k8sClient,
-		EventRecorder: &record.FakeRecorder{},
-		DPDK:          dpdkClient,
-		RouteUtil:     metalbondRouteUtil,
-		MetalnetCache: metalnetCache,
-		NodeName:      testNode,
-		PublicVNI:     100,
+		Client:            k8sClient,
+		EventRecorder:     &record.FakeRecorder{},
+		DPDK:              dpdkClient,
+		RouteUtil:         metalbondRouteUtil,
+		MetalnetCache:     metalnetCache,
+		NodeName:          testNode,
+		PublicVNI:         int(defaultRouterAddr.PublicVNI),
+		EnableIPv6Support: enableIPv6Support,
 	}
 
 	// Loop the reconciler until Requeue is false or error occurs

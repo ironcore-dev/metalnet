@@ -61,6 +61,9 @@ func getIP(ipFamily corev1.IPFamily, ipFamilies []corev1.IPFamily, ips []metalne
 			return ips[i].Addr
 		}
 	}
+	if ipFamily == corev1.IPv6Protocol {
+		return netip.MustParseAddr("::")
+	}
 	return netip.Addr{}
 }
 
@@ -89,9 +92,8 @@ type NetworkInterfaceReconciler struct {
 	NetFnsManager *netfns.Manager
 	SysFS         sysfs.FS
 
-	NodeName          string
-	PublicVNI         int
-	EnableIPv6Support bool
+	NodeName  string
+	PublicVNI int
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
