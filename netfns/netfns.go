@@ -34,6 +34,7 @@ type ClaimStore interface {
 	Create(uid types.UID, addr ghw.PCIAddress) error
 	Get(uid types.UID) (*ghw.PCIAddress, error)
 	Delete(uid types.UID) (*ghw.PCIAddress, error)
+	DeleteAll() error
 	List() ([]Claim, error)
 }
 
@@ -101,6 +102,21 @@ func (s *fileClaimStore) Delete(uid types.UID) (*ghw.PCIAddress, error) {
 		return nil, fmt.Errorf("error deleting pci address: %w", err)
 	}
 	return addr, nil
+}
+
+func (s *fileClaimStore) DeleteAll() error {
+	entries, err := os.ReadDir(s.rootDir)
+	if err != nil {
+		return fmt.Errorf("error reading dir %s: %w", s.rootDir, err)
+	}
+
+	for _, entry := range entries {
+		if err := os.Remove(filepath.Join(s.rootDir, entry.Name())); err != nil {
+			return fmt.Errorf("error deleting claim file %s: %w", entry.Name(), err)
+		}
+	}
+
+	return nil
 }
 
 func (s *fileClaimStore) List() ([]Claim, error) {
@@ -183,6 +199,13 @@ func (m *Manager) Release(uid types.UID) error {
 	}
 
 	m.available.Insert(*addr)
+	return nil
+}
+
+func (m *Manager) ReleaseAll() error {
+	if err := m.store.DeleteAll(); err != nil {
+		return err
+	}
 	return nil
 }
 

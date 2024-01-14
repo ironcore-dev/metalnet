@@ -169,5 +169,7 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	errConn := conn.Close()
 	Expect(errConn).NotTo(HaveOccurred())
+	err = netFnsManager.ReleaseAll()
+	Expect(err).NotTo(HaveOccurred())
 	ctxCancel()
 })
