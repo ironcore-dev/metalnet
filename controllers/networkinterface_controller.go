@@ -45,24 +45,18 @@ const (
 	defaultFirewallRulePrefix = "0.0.0.0/0"
 )
 
-func filterNotSetIps(ips []netip.Addr) []netip.Addr {
-	var res []netip.Addr
-	for _, ip := range ips {
-		if ip.IsValid() {
-			res = append(res, ip)
-		}
-	}
-	return res
-}
-
 func getIP(ipFamily corev1.IPFamily, ipFamilies []corev1.IPFamily, ips []metalnetv1alpha1.IP) netip.Addr {
 	for i, family := range ipFamilies {
 		if ipFamily == family {
 			return ips[i].Addr
 		}
 	}
+	// If an IP is not specified defined it as "::" or "0.0.0.0" to disable that ip family on dp-service side
 	if ipFamily == corev1.IPv6Protocol {
 		return netip.MustParseAddr("::")
+	}
+	if ipFamily == corev1.IPv4Protocol {
+		return netip.MustParseAddr("0.0.0.0")
 	}
 	return netip.Addr{}
 }
@@ -1171,7 +1165,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 			return nil, netip.Addr{}, false, fmt.Errorf("error creating dpdk interface: %w", err)
 		}
 		log.V(1).Info("Adding interface routes if not exist")
-		ips := filterNotSetIps(getNetworkInterfaceIPs(nic))
+		ips := getNetworkInterfaceIPs(nic)
 		if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
 			return nil, netip.Addr{}, false, err
 		}
@@ -1189,7 +1183,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 	log.V(1).Info("Got pci device for uid", "PCIDevice", addr)
 
 	log.V(1).Info("Adding interface route if not exists")
-	ips := filterNotSetIps(getNetworkInterfaceIPs(nic))
+	ips := getNetworkInterfaceIPs(nic)
 	if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
 		return nil, netip.Addr{}, false, err
 	}
@@ -1464,7 +1458,7 @@ func (r *NetworkInterfaceReconciler) deleteInterface(
 	underlayRoute netip.Addr,
 ) error {
 	log.V(1).Info("Removing interface route if exists")
-	ips := filterNotSetIps(getNetworkInterfaceIPs(nic))
+	ips := getNetworkInterfaceIPs(nic)
 	if err := r.removeInterfaceRoutesIfExist(ctx, vni, ips, underlayRoute); err != nil {
 		return err
 	}

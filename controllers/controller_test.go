@@ -1341,6 +1341,49 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 		})
 	})
 
+	When("creating a NetworkInterface with only ipv6 address", func() {
+		It("should succeed", func() {
+			wrongNetworkInterface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{}
+			wrongNetworkInterface.Spec.NAT = nil
+			wrongNetworkInterface.Spec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
+			wrongNetworkInterface.Spec.IPs = []metalnetv1alpha1.IP{
+				{
+					Addr: netip.MustParseAddr("0.0.0.0"),
+				},
+				{
+					Addr: netip.MustParseAddr("caca::1"),
+				},
+			}
+
+			// Create the NetworkInterface k8s object
+			Expect(k8sClient.Create(ctx, wrongNetworkInterface)).To(Succeed())
+
+			// Ensure it's created
+			createdNetworkInterface := &metalnetv1alpha1.NetworkInterface{}
+			Expect(k8sClient.Get(ctx, client.ObjectKey{
+				Namespace: ns.Name,
+				Name:      "wrong-network-interface",
+			}, createdNetworkInterface)).To(Succeed())
+
+			Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("negative-test-network"))
+			Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("0.0.0.0"))
+			Expect(createdNetworkInterface.Spec.IPs[1].Addr.String()).To(Equal("caca::1"))
+
+			// Reconcile loop should succeed
+			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).To(Succeed())
+
+			// Interface should be now created in dpservice
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			Expect(err).ToNot(HaveOccurred())
+
+			// Delete the NetworkInterface object from k8s
+			Expect(k8sClient.Delete(ctx, wrongNetworkInterface)).To(Succeed())
+			// and reconcile
+			Expect(ifaceReconcile(ctx, *wrongNetworkInterface)).To(Succeed())
+
+		})
+	})
+
 	When("creating a Loadbalancer with wrong data", Label("lb"), func() {
 		It("should fail", func() {
 			By("TCP port is negative")
