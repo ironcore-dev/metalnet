@@ -225,6 +225,17 @@ func (r *LoadBalancerReconciler) reconcile(ctx context.Context, log logr.Logger,
 	}
 	log.V(1).Info("Ensured finalizer")
 
+	if !r.EnableIPv6Support && lb.Spec.IP.Addr.Is6() {
+		if err := r.patchStatus(ctx, lb, func() {
+			lb.Status = metalnetv1alpha1.LoadBalancerStatus{
+				State: metalnetv1alpha1.LoadBalancerStateError,
+			}
+		}); err != nil {
+			log.Error(err, "Error patching loadbalancer status")
+		}
+		return ctrl.Result{}, fmt.Errorf("ipv6 flag not enabled but ipv6 address set on loadbalancer")
+	}
+
 	network := &metalnetv1alpha1.Network{}
 	networkKey := client.ObjectKey{Namespace: lb.Namespace, Name: lb.Spec.NetworkRef.Name}
 	log.V(1).Info("Getting network", "NetworkKey", networkKey)

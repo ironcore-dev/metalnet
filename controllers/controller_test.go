@@ -1341,6 +1341,80 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 		})
 	})
 
+	When("creating a NetworkInterface with two ipv4 addresses", func() {
+		It("should fail", func() {
+			wrongNetworkInterface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{}
+			wrongNetworkInterface.Spec.NAT = nil
+			wrongNetworkInterface.Spec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol}
+			wrongNetworkInterface.Spec.IPs = []metalnetv1alpha1.IP{
+				{
+					Addr: netip.MustParseAddr("1.1.1.1"),
+				},
+				{
+					Addr: netip.MustParseAddr("2.3.4.5"),
+				},
+			}
+
+			// Create the NetworkInterface k8s object
+			Expect(k8sClient.Create(ctx, wrongNetworkInterface)).To(Succeed())
+
+			// Ensure it's created
+			createdNetworkInterface := &metalnetv1alpha1.NetworkInterface{}
+			Expect(k8sClient.Get(ctx, client.ObjectKey{
+				Namespace: ns.Name,
+				Name:      "wrong-network-interface",
+			}, createdNetworkInterface)).To(Succeed())
+
+			Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("negative-test-network"))
+			Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("1.1.1.1"))
+			Expect(createdNetworkInterface.Spec.IPs[1].Addr.String()).To(Equal("2.3.4.5"))
+
+			// Reconcile loop should fail
+			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).NotTo(Succeed())
+
+			// Delete the NetworkInterface object from k8s
+			Expect(k8sClient.Delete(ctx, wrongNetworkInterface)).To(Succeed())
+
+		})
+	})
+
+	When("creating a NetworkInterface with two ipv6 addresses", func() {
+		It("should fail", func() {
+			wrongNetworkInterface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{}
+			wrongNetworkInterface.Spec.NAT = nil
+			wrongNetworkInterface.Spec.IPFamilies = []corev1.IPFamily{corev1.IPv6Protocol}
+			wrongNetworkInterface.Spec.IPs = []metalnetv1alpha1.IP{
+				{
+					Addr: netip.MustParseAddr("dede::1"),
+				},
+				{
+					Addr: netip.MustParseAddr("efef::1"),
+				},
+			}
+
+			// Create the NetworkInterface k8s object
+			Expect(k8sClient.Create(ctx, wrongNetworkInterface)).To(Succeed())
+
+			// Ensure it's created
+			createdNetworkInterface := &metalnetv1alpha1.NetworkInterface{}
+			Expect(k8sClient.Get(ctx, client.ObjectKey{
+				Namespace: ns.Name,
+				Name:      "wrong-network-interface",
+			}, createdNetworkInterface)).To(Succeed())
+
+			Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("negative-test-network"))
+			Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("dede::1"))
+			Expect(createdNetworkInterface.Spec.IPs[1].Addr.String()).To(Equal("efef::1"))
+
+			// Reconcile loop should fail
+			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).NotTo(Succeed())
+
+			// Delete the NetworkInterface object from k8s
+			Expect(k8sClient.Delete(ctx, wrongNetworkInterface)).To(Succeed())
+
+		})
+	})
+
 	When("creating a NetworkInterface with only ipv6 address", func() {
 		It("should succeed", func() {
 			wrongNetworkInterface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{}
@@ -1600,13 +1674,14 @@ func ifaceReconcile(ctx context.Context, networkInterface metalnetv1alpha1.Netwo
 
 	// Create and initialize Network Interface reconciler
 	reconciler := &NetworkInterfaceReconciler{
-		Client:        k8sClient,
-		EventRecorder: &record.FakeRecorder{},
-		DPDK:          dpdkClient,
-		RouteUtil:     metalbondRouteUtil,
-		NodeName:      testNode,
-		NetFnsManager: netFnsManager,
-		PublicVNI:     int(defaultRouterAddr.PublicVNI),
+		Client:            k8sClient,
+		EventRecorder:     &record.FakeRecorder{},
+		DPDK:              dpdkClient,
+		RouteUtil:         metalbondRouteUtil,
+		NodeName:          testNode,
+		NetFnsManager:     netFnsManager,
+		PublicVNI:         int(defaultRouterAddr.PublicVNI),
+		EnableIPv6Support: enableIPv6Support,
 	}
 
 	// Loop the reconciler until Requeue is false or error occurs

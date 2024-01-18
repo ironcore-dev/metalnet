@@ -51,7 +51,7 @@ func getIP(ipFamily corev1.IPFamily, ipFamilies []corev1.IPFamily, ips []metalne
 			return ips[i].Addr
 		}
 	}
-	// If an IP is not specified defined it as "::" or "0.0.0.0" to disable that ip family on dp-service side
+	// If an IP is not specified, then sepcify it as "::" or "0.0.0.0" to disable that ip family on dp-service side
 	if ipFamily == corev1.IPv6Protocol {
 		return netip.MustParseAddr("::")
 	}
@@ -86,8 +86,9 @@ type NetworkInterfaceReconciler struct {
 	NetFnsManager *netfns.Manager
 	SysFS         sysfs.FS
 
-	NodeName  string
-	PublicVNI int
+	NodeName          string
+	PublicVNI         int
+	EnableIPv6Support bool
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
@@ -126,6 +127,36 @@ func (r *NetworkInterfaceReconciler) reconcileExists(ctx context.Context, log lo
 
 func NetIPAddrPrefix(addr netip.Addr) netip.Prefix {
 	return netip.PrefixFrom(addr, addr.BitLen())
+}
+
+func (r *NetworkInterfaceReconciler) isValidIPConfiguration(ips []metalnetv1alpha1.IP, ipFamilies []corev1.IPFamily) (bool, error) {
+	var ipv4Count, ipv6Count int
+
+	for _, ip := range ips {
+		if ip.Addr.Is4() {
+			ipv4Count++
+		} else if ip.Addr.Is6() {
+			ipv6Count++
+		}
+	}
+
+	if !r.EnableIPv6Support && ipv6Count >= 1 {
+		return false, fmt.Errorf("ipv6 flag not enabled but ipv6 address set on interface")
+	}
+
+	if ipv4Count > 1 || ipv6Count > 1 {
+		return false, fmt.Errorf("more than one IPv4 or IPv6 address is not allowed ")
+	}
+
+	ipFamilySet := make(map[corev1.IPFamily]struct{})
+	for _, ipFamily := range ipFamilies {
+		if _, exists := ipFamilySet[ipFamily]; exists {
+			return false, fmt.Errorf("duplicate IPFamily is not allowed")
+		}
+		ipFamilySet[ipFamily] = struct{}{}
+	}
+
+	return true, nil
 }
 
 func (r *NetworkInterfaceReconciler) releaseNetFnIfClaimExists(uid types.UID) error {
@@ -723,6 +754,18 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
+	}
+
+	isValid, err := r.isValidIPConfiguration(nic.Spec.IPs, nic.Spec.IPFamilies)
+	if !isValid {
+		if errPatch := r.patchStatus(ctx, nic, func() {
+			nic.Status = metalnetv1alpha1.NetworkInterfaceStatus{
+				State: metalnetv1alpha1.NetworkInterfaceStateError,
+			}
+		}); errPatch != nil {
+			log.Error(errPatch, "Error patching network interface status")
+		}
+		return ctrl.Result{}, fmt.Errorf("interface spec validation error: %w", err)
 	}
 
 	vni := uint32(network.Spec.ID)

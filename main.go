@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jaypipes/ghw"
@@ -44,10 +45,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/hashicorp/go-version"
 	networkingv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	"github.com/ironcore-dev/metalnet/controllers"
 	//+kubebuilder:scaffold:imports
 )
+
+const dpserviceIPv6SupportVersionStr = "v0.3.1"
 
 var (
 	scheme       = runtime.NewScheme()
@@ -241,6 +245,25 @@ func main() {
 		"metalnetProtocol", protoVersion.ClientProtocol,
 		"metalnetVersion", protoVersion.ClientVersion)
 
+	if enableIPv6Support {
+		parsedIPv6SupportVersionStr, err := version.NewVersion(strings.TrimPrefix(dpserviceIPv6SupportVersionStr, "v"))
+		if err != nil {
+			fmt.Printf("error parsing defined dpservice version: %s\n", err)
+			return
+		}
+		// Remove 'v' prefix and split at '-' to ignore build metadata if present
+		verParts := strings.Split(strings.TrimPrefix(protoVersion.Spec.ServiceVersion, "v"), "-")
+		ver, err := version.NewVersion(verParts[0])
+		if err != nil {
+			setupLog.Error(err, "unable to parse received version string", "Version", protoVersion.Spec.ServiceVersion)
+			os.Exit(1)
+		}
+		if ver.LessThan(parsedIPv6SupportVersionStr) {
+			setupLog.Error(err, "dpservice doesnt support IPv6 and metalnet ipv6 support is enabled", "Version", protoVersion.Spec.ServiceVersion)
+			os.Exit(1)
+		}
+	}
+
 	if err := metalnetclient.SetupNetworkInterfaceNetworkRefNameFieldIndexer(context.TODO(), mgr.GetFieldIndexer()); err != nil {
 		setupLog.Error(err, "unable to set up field indexer", "Field", metalnetclient.NetworkInterfaceNetworkRefNameField)
 		os.Exit(1)
@@ -294,15 +317,16 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.NetworkInterfaceReconciler{
-		Client:        mgr.GetClient(),
-		EventRecorder: mgr.GetEventRecorderFor("networkinterface"),
-		Scheme:        mgr.GetScheme(),
-		DPDK:          dpdkclient.NewClient(dpdkProtoClient),
-		RouteUtil:     metalbondRouteUtil,
-		NetFnsManager: netFnsManager,
-		SysFS:         sysFS,
-		NodeName:      nodeName,
-		PublicVNI:     publicVNI,
+		Client:            mgr.GetClient(),
+		EventRecorder:     mgr.GetEventRecorderFor("networkinterface"),
+		Scheme:            mgr.GetScheme(),
+		DPDK:              dpdkclient.NewClient(dpdkProtoClient),
+		RouteUtil:         metalbondRouteUtil,
+		NetFnsManager:     netFnsManager,
+		SysFS:             sysFS,
+		NodeName:          nodeName,
+		PublicVNI:         publicVNI,
+		EnableIPv6Support: enableIPv6Support,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkInterface")
 		os.Exit(1)
