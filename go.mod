@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-logr/logr v1.4.1
 	github.com/hashicorp/go-version v1.6.0
-	github.com/ironcore-dev/controller-utils v0.9.0
+	github.com/ironcore-dev/controller-utils v0.9.1
 	github.com/ironcore-dev/dpservice-go v0.3.1
 	github.com/ironcore-dev/ironcore v0.1.2-0.20231130105619-82b2d4e911ad
 	github.com/ironcore-dev/metalbond v0.3.5-0.20231206085002-cbb83f888414
@@ -86,7 +86,7 @@ require (
 	k8s.io/component-base v0.29.0 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
+	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
