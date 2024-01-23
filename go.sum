@@ -75,8 +75,8 @@ github.com/ironcore-dev/dpservice-go v0.3.1 h1:BKwH7z/aMKNAvwz/5vzeIC0QGGHQ5AS8r
 github.com/ironcore-dev/dpservice-go v0.3.1/go.mod h1:14OkLogUmpK75qvNuIGSaOM1hb/QlIA0un0EA4sK7/s=
 github.com/ironcore-dev/ironcore v0.1.2-0.20231130105619-82b2d4e911ad h1:n7fk+Ep1IodKbJ1umJwYk/HyUGmHeywZsxRGUdVJRHw=
 github.com/ironcore-dev/ironcore v0.1.2-0.20231130105619-82b2d4e911ad/go.mod h1:UPp+izBNxBhgVa0ts6TxhgV9yFkFVy6+d2T9fsi92uY=
-github.com/ironcore-dev/metalbond v0.3.5-0.20231206085002-cbb83f888414 h1:LO3718CUYPD6SRtiUPZikOp2egIz98irZPcXFjkaCNY=
-github.com/ironcore-dev/metalbond v0.3.5-0.20231206085002-cbb83f888414/go.mod h1:7nSt4UIQewhJQVjVAcslg9LldwLdlADgMAqhXSkGH04=
+github.com/ironcore-dev/metalbond v0.3.5 h1:H+kXba0F/m2rjcAClU0I8Am/gBsFOQkf5icJBC2S8/I=
+github.com/ironcore-dev/metalbond v0.3.5/go.mod h1:oYNBDoK1VCyzjEnEZtDiafUt6j4AnYQ+zpiltIzm/0s=
 github.com/jaypipes/ghw v0.12.0 h1:xU2/MDJfWmBhJnujHY9qwXQLs3DBsf0/Xa9vECY0Tho=
 github.com/jaypipes/ghw v0.12.0/go.mod h1:jeJGbkRB2lL3/gxYzNYzEDETV1ZJ56OKr+CSeSEym+g=
 github.com/jaypipes/pcidb v1.0.0 h1:vtZIfkiCUE42oYbJS0TAq9XSfSmcsgo9IdxSm9qzYU8=
