@@ -159,6 +159,20 @@ func (r *NetworkInterfaceReconciler) isValidIPConfiguration(ips []metalnetv1alph
 	return true, nil
 }
 
+func (r *NetworkInterfaceReconciler) isValidInterfaceSpec(spec *metalnetv1alpha1.NetworkInterfaceSpec) (bool, error) {
+	isValid, err := r.isValidIPConfiguration(spec.IPs, spec.IPFamilies)
+	if !isValid {
+		return false, err
+	}
+
+	isValid, err = r.isValidMeteringParams(spec.MeteringRate)
+	if !isValid {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (r *NetworkInterfaceReconciler) releaseNetFnIfClaimExists(uid types.UID) error {
 	if err := r.NetFnsManager.Release(uid); err != nil && !errors.Is(err, netfns.ErrClaimNotFound) {
 		return fmt.Errorf("error releasing claim: %w", err)
@@ -756,7 +770,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 		return ctrl.Result{}, nil
 	}
 
-	isValid, err := r.isValidIPConfiguration(nic.Spec.IPs, nic.Spec.IPFamilies)
+	isValid, err := r.isValidInterfaceSpec(&nic.Spec)
 	if !isValid {
 		if errPatch := r.patchStatus(ctx, nic, func() {
 			nic.Status = metalnetv1alpha1.NetworkInterfaceStatus{
@@ -1166,6 +1180,42 @@ func (r *NetworkInterfaceReconciler) reconcileFirewallRules(ctx context.Context,
 	return nil
 }
 
+func (r *NetworkInterfaceReconciler) isValidMeteringParams(meteringParams *metalnetv1alpha1.MeteringParameters) (bool, error) {
+	if meteringParams == nil {
+		return true, nil
+	}
+
+	if meteringParams.TotalRate != nil && meteringParams.PublicRate != nil {
+		if *meteringParams.TotalRate < *meteringParams.PublicRate {
+			return false, fmt.Errorf("total rate cannot be less than public rate")
+		}
+	}
+
+	return true, nil
+}
+
+func (r *NetworkInterfaceReconciler) getInterfaceMeteringParams(nic *metalnetv1alpha1.NetworkInterface) (*dpdk.MeteringParams, error) {
+
+	meterParams := &dpdk.MeteringParams{
+		TotalRate:  0,
+		PublicRate: 0,
+	}
+
+	if nic.Spec.MeteringRate == nil {
+		return meterParams, nil
+	}
+
+	if nic.Spec.MeteringRate.TotalRate != nil {
+		meterParams.TotalRate = *nic.Spec.MeteringRate.TotalRate
+	}
+
+	if nic.Spec.MeteringRate.PublicRate != nil {
+		meterParams.PublicRate = *nic.Spec.MeteringRate.PublicRate
+	}
+
+	return meterParams, nil
+}
+
 func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log logr.Logger, nic *metalnetv1alpha1.NetworkInterface, vni uint32) (*ghw.PCIAddress, netip.Addr, bool, error) {
 	log.V(1).Info("Getting dpdk interface")
 	iface, err := r.DPDK.GetInterface(ctx, string(nic.UID))
@@ -1195,13 +1245,19 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 		primaryIpv4 := getNetworkInterfaceIP(corev1.IPv4Protocol, nic)
 		primaryIpv6 := getNetworkInterfaceIP(corev1.IPv6Protocol, nic)
 
+		meteringParams, err := r.getInterfaceMeteringParams(nic)
+		if err != nil {
+			return nil, netip.Addr{}, false, fmt.Errorf("error getting metering params: %w", err)
+		}
+
 		iface, err := r.DPDK.CreateInterface(ctx, &dpdk.Interface{
 			InterfaceMeta: dpdk.InterfaceMeta{ID: string(nic.UID)},
 			Spec: dpdk.InterfaceSpec{
-				VNI:    vni,
-				Device: dpdkDevice,
-				IPv4:   &primaryIpv4,
-				IPv6:   &primaryIpv6,
+				VNI:      vni,
+				Device:   dpdkDevice,
+				IPv4:     &primaryIpv4,
+				IPv6:     &primaryIpv6,
+				Metering: meteringParams,
 			},
 		})
 		if err != nil {

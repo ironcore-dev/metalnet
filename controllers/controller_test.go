@@ -172,6 +172,8 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 	Context("NetworkInterface", Label("interface"), Ordered, func() {
 		When("creating a NetworkInterface", func() {
 			It("should create successfully", func() {
+				var totalRate uint64 = 1000
+				var publicRate uint64 = 500
 				// Define a new NetworkInterface object
 				networkInterface = &metalnetv1alpha1.NetworkInterface{
 					ObjectMeta: metav1.ObjectMeta{
@@ -192,6 +194,10 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 								Addr: netip.MustParseAddr("fd00::1"),
 							},
 						},
+						MeteringRate: &metalnetv1alpha1.MeteringParameters{
+							TotalRate:  &totalRate,
+							PublicRate: &publicRate,
+						},
 					},
 				}
 
@@ -208,6 +214,8 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("test-network"))
 				Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.1"))
 				Expect(createdNetworkInterface.Spec.IPs[1].Addr.String()).To(Equal("fd00::1"))
+				Expect(*createdNetworkInterface.Spec.MeteringRate.TotalRate).To(Equal(totalRate)) //MeteringRarameters cannot take actual effect, but it should be in the spec
+				Expect(*createdNetworkInterface.Spec.MeteringRate.PublicRate).To(Equal(publicRate))
 
 				// It should not yet be created in dpservice
 				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
@@ -1097,6 +1105,45 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			Expect(k8sClient.Delete(ctx, wrongNetworkInterface)).To(Succeed())
 			// and reconcile
 			Expect(ifaceReconcile(ctx, *wrongNetworkInterface)).To(Succeed())
+		})
+	})
+
+	When("creating a NetworkInterface with wrong metering rate parameters", func() {
+		It("should fail", func() {
+			By("total rate is smaller than the public traffic rate")
+			var totalRate uint64 = 500
+			var publicRate uint64 = 1000
+			wrongNetworkInterface.Spec.MeteringRate = &metalnetv1alpha1.MeteringParameters{
+				TotalRate:  &totalRate,
+				PublicRate: &publicRate,
+			}
+
+			// Create the NetworkInterface k8s object
+			Expect(k8sClient.Create(ctx, wrongNetworkInterface)).To(Succeed())
+
+			// Ensure it's created
+			createdNetworkInterface := &metalnetv1alpha1.NetworkInterface{}
+			Expect(k8sClient.Get(ctx, client.ObjectKey{
+				Namespace: ns.Name,
+				Name:      "wrong-network-interface",
+			}, createdNetworkInterface)).To(Succeed())
+
+			Expect(createdNetworkInterface.Spec.NetworkRef.Name).To(Equal("negative-test-network"))
+			Expect(createdNetworkInterface.Spec.IPs[0].Addr.String()).To(Equal("10.0.0.1"))
+
+			// Reconcile loop should fail, because of total rate is smaller than the public traffic rate
+			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).ToNot(Succeed())
+
+			// Interface should Not be created in dpservice
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			Expect(err).To(HaveOccurred())
+
+			// Delete the NetworkInterface object from k8s
+			Expect(k8sClient.Delete(ctx, wrongNetworkInterface)).To(Succeed())
+			// and reconcile
+			Expect(ifaceReconcile(ctx, *wrongNetworkInterface)).To(Succeed())
+
+			wrongNetworkInterface.Spec.MeteringRate = nil
 		})
 	})
 

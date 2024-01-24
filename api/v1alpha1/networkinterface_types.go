@@ -38,6 +38,8 @@ type NetworkInterfaceSpec struct {
 	NodeName *string `json:"nodeName,omitempty"`
 	// FirewallRules are the firewall rules to be applied to this interface.
 	FirewallRules []FirewallRule `json:"firewallRules,omitempty"`
+	// MeteringRate are the metering parameters to be applied to this interface.
+	MeteringRate *MeteringParameters `json:"meteringRate,omitempty"`
 }
 
 // NetworkInterfaceStatus defines the observed state of NetworkInterface
@@ -165,6 +167,11 @@ const (
 	// FirewallRuleDirectionEgress is used to define rules for outgoing traffic.
 	FirewallRuleDirectionEgress FirewallRuleDirection = "Egress"
 )
+
+type MeteringParameters struct {
+	TotalRate  *uint64 `json:"totalRate,omitempty"`
+	PublicRate *uint64 `json:"publicRate,omitempty"`
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

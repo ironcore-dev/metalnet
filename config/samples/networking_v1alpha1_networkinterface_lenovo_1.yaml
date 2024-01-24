@@ -9,6 +9,9 @@ spec:
     - "IPv4"
   ips:
     - 10.0.0.8
+  meteringRate:
+    totalRate: 100
+    publicRate: 50
   nodeName: fra4-lab-lenovo-1
   networkRef:
     name: network-sample

@@ -188,6 +188,17 @@ spec:
                 items:
                   type: string
                 type: array
+              meteringRate:
+                description: MeteringRate are the metering parameters to be applied
+                  to this interface.
+                properties:
+                  publicRate:
+                    format: int64
+                    type: integer
+                  totalRate:
+                    format: int64
+                    type: integer
+                type: object
               nat:
                 description: NATInfo is detailed information about the NAT on this
                   interface
