@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/ironcore-dev/metalnet/sysfs"
 	"github.com/jaypipes/ghw"
@@ -273,5 +274,36 @@ func CollectTAPFunctions(devices []string) ([]ghw.PCIAddress, error) {
 		}
 		addresses = append(addresses, addr)
 	}
+	return addresses, nil
+}
+
+func GenerateVirtualFunctions(pfDevice string, numVFs int, offset int) ([]ghw.PCIAddress, error) {
+	var addresses []ghw.PCIAddress
+
+	baseAddress := *ghw.PCIAddressFromString(pfDevice)
+
+	baseDevice, err := strconv.Atoi(baseAddress.Device)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing device number: %v", err)
+	}
+	baseFunction, err := strconv.Atoi(baseAddress.Function)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing function number: %v", err)
+	}
+
+	for i := 0; i < numVFs; i++ {
+		device := baseDevice
+		function := baseFunction + offset + i
+
+		if function > 0x7 {
+			device += function / 0x8
+			function %= 0x8
+		}
+
+		newAddressStr := fmt.Sprintf("%s:%s:%02x.%x", baseAddress.Domain, baseAddress.Bus, device, function)
+		newAddress := *ghw.PCIAddressFromString(newAddressStr)
+		addresses = append(addresses, newAddress)
+	}
+
 	return addresses, nil
 }

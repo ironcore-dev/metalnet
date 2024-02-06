@@ -57,6 +57,9 @@ var (
 	scheme       = runtime.NewScheme()
 	setupLog     = ctrl.Log.WithName("setup")
 	hostName, _  = os.Hostname()
+	pfBaseAddr   = "0000:af:00.0"
+	numOfVFs     = 126
+	pfToVfOffset = 3
 	buildVersion string
 )
 
@@ -87,6 +90,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&nodeName, "node-name", hostName, "The node name to react to when reconciling network interfaces.")
+	flag.StringVar(&nodeName, "pf-pci-base-addr", pfBaseAddr, "Physical Function(pf) PCI base address used for VF address calculation")
 	flag.StringVar(&dpserviceAddr, "dp-service-address", "127.0.0.1:1337", "The address of dpservice.")
 	flag.StringSliceVar(&metalbondPeers, "metalbond-peer", nil, "The addresses of the metalbond peers.")
 	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
@@ -148,6 +152,13 @@ func main() {
 		if err != nil {
 			setupLog.Error(err, "unable to collect virtual functions")
 			os.Exit(1)
+		}
+		if len(initAvailable) == 0 {
+			initAvailable, err = netfns.GenerateVirtualFunctions(pfBaseAddr, numOfVFs, pfToVfOffset)
+			if err != nil {
+				setupLog.Error(err, "unable to collect virtual functions with hard coded pf address", "PFAddress", pfBaseAddr)
+				os.Exit(1)
+			}
 		}
 	} else {
 		initAvailable, err = netfns.CollectTAPFunctions([]string{"net_tap3", "net_tap4", "net_tap5"})
