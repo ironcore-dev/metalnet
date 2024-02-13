@@ -229,10 +229,17 @@ func (r *NetworkInterfaceReconciler) addInterfaceRouteIfNotExists(ctx context.Co
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) addInterfaceRoutesIfNotExist(ctx context.Context, vni uint32, ips []netip.Addr, underlayRoute netip.Addr) error {
+func (r *NetworkInterfaceReconciler) addInterfaceRoutesIfNotExist(ctx context.Context, log logr.Logger, vni uint32, ips []netip.Addr, underlayRoute netip.Addr) error {
 	for _, localAddr := range ips {
 		if err := r.addInterfaceRouteIfNotExists(ctx, vni, localAddr, underlayRoute); err != nil {
 			return fmt.Errorf("[local address %s] %w", localAddr, err)
+		}
+		if localAddr.Is6() {
+			log.V(1).Info("Adding routable ipv6 route if not exists")
+			if err := r.addVirtualIPRouteIfNotExists(ctx, localAddr, underlayRoute); err != nil {
+				return err
+			}
+			log.V(1).Info("Added routable ipv6 route if not existed")
 		}
 	}
 	return nil
@@ -250,10 +257,17 @@ func (r *NetworkInterfaceReconciler) removeInterfaceRouteIfExists(ctx context.Co
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) removeInterfaceRoutesIfExist(ctx context.Context, vni uint32, ips []netip.Addr, underlayRoute netip.Addr) error {
+func (r *NetworkInterfaceReconciler) removeInterfaceRoutesIfExist(ctx context.Context, log logr.Logger, vni uint32, ips []netip.Addr, underlayRoute netip.Addr) error {
 	for _, localAddr := range ips {
 		if err := r.removeInterfaceRouteIfExists(ctx, vni, localAddr, underlayRoute); err != nil {
 			return fmt.Errorf("[local address %s] %w", localAddr, err)
+		}
+		if localAddr.Is6() {
+			log.V(1).Info("Removing routable ipv6 route if exists")
+			if err := r.removeVirtualIPRouteIfExists(ctx, localAddr, underlayRoute); err != nil {
+				return err
+			}
+			log.V(1).Info("Removed routable ipv6 route if existed")
 		}
 	}
 	return nil
@@ -1265,7 +1279,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 		}
 		log.V(1).Info("Adding interface routes if not exist")
 		ips := getNetworkInterfaceIPs(nic)
-		if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
+		if err := r.addInterfaceRoutesIfNotExist(ctx, log, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
 			return nil, netip.Addr{}, false, err
 		}
 		log.V(1).Info("Added interface routes if not existed")
@@ -1283,7 +1297,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 
 	log.V(1).Info("Adding interface route if not exists")
 	ips := getNetworkInterfaceIPs(nic)
-	if err := r.addInterfaceRoutesIfNotExist(ctx, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
+	if err := r.addInterfaceRoutesIfNotExist(ctx, log, vni, ips, *iface.Spec.UnderlayRoute); err != nil {
 		return nil, netip.Addr{}, false, err
 	}
 	log.V(1).Info("Added interface route if not existed")
@@ -1558,7 +1572,7 @@ func (r *NetworkInterfaceReconciler) deleteInterface(
 ) error {
 	log.V(1).Info("Removing interface route if exists")
 	ips := getNetworkInterfaceIPs(nic)
-	if err := r.removeInterfaceRoutesIfExist(ctx, vni, ips, underlayRoute); err != nil {
+	if err := r.removeInterfaceRoutesIfExist(ctx, log, vni, ips, underlayRoute); err != nil {
 		return err
 	}
 	log.V(1).Info("Removed interface route if existed")
