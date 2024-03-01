@@ -57,9 +57,9 @@ var (
 	scheme       = runtime.NewScheme()
 	setupLog     = ctrl.Log.WithName("setup")
 	hostName, _  = os.Hostname()
-	pfBaseAddr   = "0000:af:00.0"
+	baseAddr     = "0000:06:00.0"
 	numOfVFs     = 126
-	pfToVfOffset = 3
+	pfToVfOffset = 2
 	buildVersion string
 )
 
@@ -75,6 +75,7 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var nodeName string
+	var pfBaseAddr string
 	var dpserviceAddr string
 	var metalbondPeers []string
 	var metalbondDebug bool
@@ -90,7 +91,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&nodeName, "node-name", hostName, "The node name to react to when reconciling network interfaces.")
-	flag.StringVar(&nodeName, "pf-pci-base-addr", pfBaseAddr, "Physical Function(pf) PCI base address used for VF address calculation")
+	flag.StringVar(&pfBaseAddr, "pf-pci-base-addr", baseAddr, "Physical Function(pf) PCI base address used for VF address calculation")
 	flag.StringVar(&dpserviceAddr, "dp-service-address", "127.0.0.1:1337", "The address of dpservice.")
 	flag.StringSliceVar(&metalbondPeers, "metalbond-peer", nil, "The addresses of the metalbond peers.")
 	flag.BoolVar(&metalbondDebug, "metalbond-debug", false, "Enable metalbond debug.")
