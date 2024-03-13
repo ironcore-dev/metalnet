@@ -316,10 +316,8 @@ func main() {
 	}
 	defaultRouterAddr.RWMutex.Unlock()
 
-	if strings.HasSuffix(nodeName, bluefieldSuffix) {
-		nodeName = strings.TrimSuffix(nodeName, bluefieldSuffix)
-		setupLog.Info("Running on bluefield, trimming -bluefield from Nodename")
-	}
+	// In case string "-bluefield" in the node name, remove it
+	nodeName = strings.Replace(nodeName, bluefieldSuffix, "", 1)
 
 	if err = (&controllers.NetworkReconciler{
 		Client:            mgr.GetClient(),
