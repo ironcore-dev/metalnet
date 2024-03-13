@@ -53,6 +53,8 @@ import (
 
 const dpserviceIPv6SupportVersionStr = "v0.3.1"
 
+const bluefieldSuffix = "-bluefield"
+
 var (
 	scheme       = runtime.NewScheme()
 	setupLog     = ctrl.Log.WithName("setup")
@@ -313,6 +315,11 @@ func main() {
 		setupLog.Info("Couldn't obtain default router address via metalbond subscription, using --router-address flag's value")
 	}
 	defaultRouterAddr.RWMutex.Unlock()
+
+	if strings.HasSuffix(nodeName, bluefieldSuffix) {
+		nodeName = strings.TrimSuffix(nodeName, bluefieldSuffix)
+		setupLog.Info("Running on bluefield, trimming -bluefield from Nodename")
+	}
 
 	if err = (&controllers.NetworkReconciler{
 		Client:            mgr.GetClient(),
