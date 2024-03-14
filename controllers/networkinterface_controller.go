@@ -1323,7 +1323,7 @@ func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (s
 	pciDev, err := r.SysFS.PCIDevice(addr)
 	if err != nil {
 		// Calculate based on the offset parameter if sysfs not available
-		return fmt.Sprintf("%s:%s:%02x.0_representor_vf%d", addr.Domain, addr.Bus, pciDevice, pciFunction-uint64(r.PfToVfOffset)), nil
+		return fmt.Sprintf("%s:%s:00.0_representor_vf%d", addr.Domain, addr.Bus, pciFunction-uint64(r.PfToVfOffset)), nil
 	} else {
 		physFn, err := pciDev.Physfn()
 		if err != nil {
