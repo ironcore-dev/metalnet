@@ -86,6 +86,7 @@ type NetworkInterfaceReconciler struct {
 	NetFnsManager *netfns.Manager
 	SysFS         sysfs.FS
 
+	PfToVfOffset      int
 	NodeName          string
 	PublicVNI         int
 	EnableIPv6Support bool
@@ -1317,29 +1318,29 @@ func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (s
 	if err != nil {
 		return "", fmt.Errorf("error parsing address device %s: %w", addr.Device, err)
 	}
+	pciFunction = pciDevice*8 + pciFunction
 
 	pciDev, err := r.SysFS.PCIDevice(addr)
 	if err != nil {
-		return "", fmt.Errorf("error getting sysfs pci device: %w", err)
-	}
+		// Calculate based on the offset parameter if sysfs not available
+		return fmt.Sprintf("%s:%s:%02x.0_representor_vf%d", addr.Domain, addr.Bus, pciDevice, pciFunction-uint64(r.PfToVfOffset)), nil
+	} else {
+		physFn, err := pciDev.Physfn()
+		if err != nil {
+			return "", fmt.Errorf("error getting sysfs physfn: %w", err)
+		}
 
-	physFn, err := pciDev.Physfn()
-	if err != nil {
-		return "", fmt.Errorf("error getting sysfs physfn: %w", err)
-	}
+		physFnAddr, err := physFn.Address()
+		if err != nil {
+			return "", fmt.Errorf("error getting physfn details: %w", err)
+		}
 
-	physFnAddr, err := physFn.Address()
-	if err != nil {
-		return "", fmt.Errorf("error getting physfn details: %w", err)
+		sriov, err := physFn.SRIOV()
+		if err != nil {
+			return "", fmt.Errorf("error getting sysfs sriov: %w", err)
+		}
+		return fmt.Sprintf("%s:%s:%s.0_representor_vf%d", physFnAddr.Domain, physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
 	}
-
-	sriov, err := physFn.SRIOV()
-	if err != nil {
-		return "", fmt.Errorf("error getting sysfs sriov: %w", err)
-	}
-
-	pciFunction = pciDevice*8 + pciFunction
-	return fmt.Sprintf("%s:%s:%s.0_representor_vf%d", physFnAddr.Domain, physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
 }
 
 func (r *NetworkInterfaceReconciler) patchStatus(

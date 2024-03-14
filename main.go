@@ -61,7 +61,7 @@ var (
 	hostName, _  = os.Hostname()
 	baseAddr     = "0000:06:00.0"
 	numOfVFs     = 126
-	pfToVfOffset = 2
+	pfToVfOffset = 3
 	buildVersion string
 )
 
@@ -340,6 +340,7 @@ func main() {
 		DPDK:              dpdkclient.NewClient(dpdkProtoClient),
 		RouteUtil:         metalbondRouteUtil,
 		NetFnsManager:     netFnsManager,
+		PfToVfOffset:      pfToVfOffset,
 		SysFS:             sysFS,
 		NodeName:          nodeName,
 		PublicVNI:         publicVNI,
