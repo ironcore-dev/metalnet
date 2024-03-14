@@ -56,13 +56,14 @@ const dpserviceIPv6SupportVersionStr = "v0.3.1"
 const bluefieldSuffix = "-bluefield"
 
 var (
-	scheme       = runtime.NewScheme()
-	setupLog     = ctrl.Log.WithName("setup")
-	hostName, _  = os.Hostname()
-	baseAddr     = "0000:03:00.0"
-	numOfVFs     = 126
-	pfToVfOffset = 3
-	buildVersion string
+	scheme                      = runtime.NewScheme()
+	setupLog                    = ctrl.Log.WithName("setup")
+	hostName, _                 = os.Hostname()
+	baseAddr                    = "0000:03:00.0"
+	bluefieldHostDefaultBusAddr = "06"
+	numOfVFs                    = 126
+	pfToVfOffset                = 3
+	buildVersion                string
 )
 
 func init() {
@@ -82,6 +83,7 @@ func main() {
 	var metalbondPeers []string
 	var metalbondDebug bool
 	var tapDeviceMod bool
+	var bluefieldDetected = false
 	var enableIPv6Support bool
 	var routerAddress net.IP
 	var publicVNI int
@@ -316,8 +318,11 @@ func main() {
 	}
 	defaultRouterAddr.RWMutex.Unlock()
 
-	// In case string "-bluefield" in the node name, remove it
-	nodeName = strings.Replace(nodeName, bluefieldSuffix, "", 1)
+	if strings.Contains(nodeName, bluefieldSuffix) {
+		bluefieldDetected = true
+		// In case string "-bluefield" in the node name, remove it
+		nodeName = strings.Replace(nodeName, bluefieldSuffix, "", 1)
+	}
 
 	if err = (&controllers.NetworkReconciler{
 		Client:            mgr.GetClient(),
@@ -334,17 +339,19 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.NetworkInterfaceReconciler{
-		Client:            mgr.GetClient(),
-		EventRecorder:     mgr.GetEventRecorderFor("networkinterface"),
-		Scheme:            mgr.GetScheme(),
-		DPDK:              dpdkclient.NewClient(dpdkProtoClient),
-		RouteUtil:         metalbondRouteUtil,
-		NetFnsManager:     netFnsManager,
-		PfToVfOffset:      pfToVfOffset,
-		SysFS:             sysFS,
-		NodeName:          nodeName,
-		PublicVNI:         publicVNI,
-		EnableIPv6Support: enableIPv6Support,
+		Client:                      mgr.GetClient(),
+		EventRecorder:               mgr.GetEventRecorderFor("networkinterface"),
+		Scheme:                      mgr.GetScheme(),
+		DPDK:                        dpdkclient.NewClient(dpdkProtoClient),
+		RouteUtil:                   metalbondRouteUtil,
+		NetFnsManager:               netFnsManager,
+		PfToVfOffset:                pfToVfOffset,
+		SysFS:                       sysFS,
+		NodeName:                    nodeName,
+		PublicVNI:                   publicVNI,
+		EnableIPv6Support:           enableIPv6Support,
+		BluefieldDetected:           bluefieldDetected,
+		BluefieldHostDefaultBusAddr: bluefieldHostDefaultBusAddr,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkInterface")
 		os.Exit(1)

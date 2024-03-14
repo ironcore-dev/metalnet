@@ -86,10 +86,12 @@ type NetworkInterfaceReconciler struct {
 	NetFnsManager *netfns.Manager
 	SysFS         sysfs.FS
 
-	PfToVfOffset      int
-	NodeName          string
-	PublicVNI         int
-	EnableIPv6Support bool
+	PfToVfOffset                int
+	NodeName                    string
+	PublicVNI                   int
+	EnableIPv6Support           bool
+	BluefieldDetected           bool
+	BluefieldHostDefaultBusAddr string
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
@@ -887,6 +889,10 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	log.V(1).Info("Patching status")
 	if err := r.patchStatus(ctx, nic, func() {
 		nic.Status.State = metalnetv1alpha1.NetworkInterfaceStateReady
+		if r.BluefieldDetected {
+			pciAddr.Bus = r.BluefieldHostDefaultBusAddr
+			log.V(1).Info("Bluefield detected. Converting PCI Bus to the host PCI bus", "PCIAddress", pciAddr)
+		}
 		nic.Status.PCIAddress = &metalnetv1alpha1.PCIAddress{
 			Bus:      pciAddr.Bus,
 			Domain:   pciAddr.Domain,
