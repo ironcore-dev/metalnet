@@ -59,7 +59,7 @@ var (
 	scheme       = runtime.NewScheme()
 	setupLog     = ctrl.Log.WithName("setup")
 	hostName, _  = os.Hostname()
-	baseAddr     = "0000:06:00.0"
+	baseAddr     = "0000:03:00.0"
 	numOfVFs     = 126
 	pfToVfOffset = 3
 	buildVersion string
