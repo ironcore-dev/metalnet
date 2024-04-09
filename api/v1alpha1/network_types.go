@@ -27,6 +27,9 @@ type NetworkSpec struct {
 	// +listType=map
 	// +listMapKey=id
 	PeeredPrefixes []PeeredPrefix `json:"peeredPrefixes,omitempty" patchStrategy:"merge" patchMergeKey:"peeredPrefixes"`
+
+	// InternetGateway is a flag that indicates whether the network has an internet gateway.
+	InternetGateway bool `json:"internetGateway,omitempty"`
 }
 
 // PeeredPrefix contains information of the peered networks and their allowed CIDRs.

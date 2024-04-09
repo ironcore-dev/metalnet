@@ -50,6 +50,10 @@ spec:
                 maximum: 16777215
                 minimum: 1
                 type: integer
+              internetGateway:
+                description: InternetGateway is a flag that indicates whether the
+                  network has an internet gateway.
+                type: boolean
               peeredIDs:
                 description: PeeredIDs are the IDs of networks to peer with.
                 items:

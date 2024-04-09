@@ -650,6 +650,43 @@ k8s.io/apimachinery/pkg/types.UID
 </tr>
 </tbody>
 </table>
+<h3 id="networking.metalnet.ironcore.dev/v1alpha1.MeteringParameters">MeteringParameters
+</h3>
+<p>
+(<em>Appears on:</em><a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkInterfaceSpec">NetworkInterfaceSpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>totalRate</code><br/>
+<em>
+uint64
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>publicRate</code><br/>
+<em>
+uint64
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="networking.metalnet.ironcore.dev/v1alpha1.NATDetails">NATDetails
 </h3>
 <p>
@@ -774,6 +811,17 @@ int32
 <td>
 <em>(Optional)</em>
 <p>PeeredPrefixes are the allowed CIDRs of the peered networks.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>internetGateway</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>InternetGateway is a flag that indicates whether the network has an internet gateway.</p>
 </td>
 </tr>
 </table>
@@ -939,6 +987,19 @@ string
 <p>FirewallRules are the firewall rules to be applied to this interface.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>meteringRate</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.MeteringParameters">
+MeteringParameters
+</a>
+</em>
+</td>
+<td>
+<p>MeteringRate are the metering parameters to be applied to this interface.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1088,6 +1149,19 @@ string
 </td>
 <td>
 <p>FirewallRules are the firewall rules to be applied to this interface.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>meteringRate</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.MeteringParameters">
+MeteringParameters
+</a>
+</em>
+</td>
+<td>
+<p>MeteringRate are the metering parameters to be applied to this interface.</p>
 </td>
 </tr>
 </tbody>
@@ -1263,6 +1337,17 @@ int32
 <td>
 <em>(Optional)</em>
 <p>PeeredPrefixes are the allowed CIDRs of the peered networks.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>internetGateway</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>InternetGateway is a flag that indicates whether the network has an internet gateway.</p>
 </td>
 </tr>
 </tbody>
