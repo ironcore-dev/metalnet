@@ -650,6 +650,43 @@ k8s.io/apimachinery/pkg/types.UID
 </tr>
 </tbody>
 </table>
+<h3 id="networking.metalnet.ironcore.dev/v1alpha1.MeteringParameters">MeteringParameters
+</h3>
+<p>
+(<em>Appears on:</em><a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkInterfaceSpec">NetworkInterfaceSpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>totalRate</code><br/>
+<em>
+uint64
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>publicRate</code><br/>
+<em>
+uint64
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="networking.metalnet.ironcore.dev/v1alpha1.NATDetails">NATDetails
 </h3>
 <p>
@@ -777,6 +814,18 @@ int32
 </td>
 </tr>
 </table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkStatus">
+NetworkStatus
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
@@ -939,6 +988,19 @@ string
 <p>FirewallRules are the firewall rules to be applied to this interface.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>meteringRate</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.MeteringParameters">
+MeteringParameters
+</a>
+</em>
+</td>
+<td>
+<p>MeteringRate are the metering parameters to be applied to this interface.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1090,6 +1152,19 @@ string
 <p>FirewallRules are the firewall rules to be applied to this interface.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>meteringRate</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.MeteringParameters">
+MeteringParameters
+</a>
+</em>
+</td>
+<td>
+<p>MeteringRate are the metering parameters to be applied to this interface.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="networking.metalnet.ironcore.dev/v1alpha1.NetworkInterfaceState">NetworkInterfaceState
@@ -1213,6 +1288,74 @@ NetworkInterfaceState
 </tr>
 </tbody>
 </table>
+<h3 id="networking.metalnet.ironcore.dev/v1alpha1.NetworkPeeringState">NetworkPeeringState
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em><a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkPeeringStatus">NetworkPeeringStatus</a>)
+</p>
+<div>
+<p>NetworkPeeringState is the state a NetworkPeering</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;Error&#34;</p></td>
+<td><p>NetworkPeeringStateError signals that the there was an error during network peering.</p>
+</td>
+</tr><tr><td><p>&#34;Pending&#34;</p></td>
+<td><p>NetworkPeeringStatePending signals that the network peering is not applied.</p>
+</td>
+</tr><tr><td><p>&#34;Ready&#34;</p></td>
+<td><p>NetworkPeeringStateReady signals that the network peering is ready.</p>
+</td>
+</tr></tbody>
+</table>
+<h3 id="networking.metalnet.ironcore.dev/v1alpha1.NetworkPeeringStatus">NetworkPeeringStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkStatus">NetworkStatus</a>)
+</p>
+<div>
+<p>NetworkPeeringStatus is the status of a network peering.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>id</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>ID is the ID of the peered network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>state</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkPeeringState">
+NetworkPeeringState
+</a>
+</em>
+</td>
+<td>
+<p>State represents the network peering state</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="networking.metalnet.ironcore.dev/v1alpha1.NetworkSpec">NetworkSpec
 </h3>
 <p>
@@ -1263,6 +1406,36 @@ int32
 <td>
 <em>(Optional)</em>
 <p>PeeredPrefixes are the allowed CIDRs of the peered networks.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="networking.metalnet.ironcore.dev/v1alpha1.NetworkStatus">NetworkStatus
+</h3>
+<p>
+(<em>Appears on:</em><a href="#networking.metalnet.ironcore.dev/v1alpha1.Network">Network</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>peerings</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkPeeringStatus">
+[]NetworkPeeringStatus
+</a>
+</em>
+</td>
+<td>
+<p>Peerings contains the states of the network peerings for the network.</p>
 </td>
 </tr>
 </tbody>

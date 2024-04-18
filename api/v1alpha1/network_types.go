@@ -37,6 +37,33 @@ type PeeredPrefix struct {
 	Prefixes []IPPrefix `json:"prefixes"`
 }
 
+type NetworkStatus struct {
+	// Peerings contains the states of the network peerings for the network.
+	Peerings []NetworkPeeringStatus `json:"peerings,omitempty"`
+}
+
+// NetworkPeeringState is the state a NetworkPeering
+type NetworkPeeringState string
+
+const (
+	// NetworkPeeringStateError signals that the there was an error during network peering.
+	NetworkPeeringStateError NetworkPeeringState = "Error"
+	// NetworkPeeringStatePending signals that the network peering is not applied.
+	NetworkPeeringStatePending NetworkPeeringState = "Pending"
+	// NetworkPeeringStateReady signals that the network peering is ready.
+	NetworkPeeringStateReady NetworkPeeringState = "Ready"
+)
+
+// NetworkPeeringStatus is the status of a network peering.
+type NetworkPeeringStatus struct {
+	// +kubebuilder:validation:Maximum=16777215
+	// +kubebuilder:validation:Minimum=1
+	// ID is the ID of the peered network.
+	ID int32 `json:"id"`
+	// State represents the network peering state
+	State NetworkPeeringState `json:"state,omitempty"`
+}
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Handle",type=integer,description="ID of the network.",JSONPath=`.spec.id`,priority=10
@@ -49,6 +76,8 @@ type Network struct {
 
 	// +kubebuilder:validation:Required
 	Spec NetworkSpec `json:"spec"`
+
+	Status NetworkStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

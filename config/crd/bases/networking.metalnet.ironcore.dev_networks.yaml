@@ -82,6 +82,28 @@ spec:
             required:
             - id
             type: object
+          status:
+            properties:
+              peerings:
+                description: Peerings contains the states of the network peerings
+                  for the network.
+                items:
+                  description: NetworkPeeringStatus is the status of a network peering.
+                  properties:
+                    id:
+                      description: ID is the ID of the peered network.
+                      format: int32
+                      maximum: 16777215
+                      minimum: 1
+                      type: integer
+                    state:
+                      description: State represents the network peering state
+                      type: string
+                  required:
+                  - id
+                  type: object
+                type: array
+            type: object
         required:
         - spec
         type: object

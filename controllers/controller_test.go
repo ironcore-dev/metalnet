@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
 	dpdk "github.com/ironcore-dev/dpservice-go/proto"
@@ -46,7 +47,6 @@ var _ = Describe("Network Controller", Label("network"), Ordered, func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, network)).To(Succeed())
-
 			// Ensure it's created
 			createdNetwork := &metalnetv1alpha1.Network{}
 			Expect(k8sClient.Get(ctx, client.ObjectKey{
@@ -96,6 +96,137 @@ var _ = Describe("Network Controller", Label("network"), Ordered, func() {
 			}, updatedNetwork)).To(Succeed())
 
 			Expect(updatedNetwork.Spec.PeeredIDs).To(Equal([]int32{4, 5}))
+		})
+		It("should update peering status successfully", func() {
+			By("creating a network")
+			network = &metalnetv1alpha1.Network{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-network",
+					Namespace: ns.Name,
+				},
+				Spec: metalnetv1alpha1.NetworkSpec{
+					ID:        111,
+					PeeredIDs: []int32{112},
+				},
+			}
+			Expect(k8sClient.Create(ctx, network)).To(Succeed())
+
+			By("ensuring network is created")
+			Eventually(Get(network)).Should(Succeed())
+
+			Expect(networkReconcile(ctx, *network)).To(Succeed())
+
+			By("defining NetworkInterface object to use created network")
+			networkInterface := &metalnetv1alpha1.NetworkInterface{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-network-interface",
+					Namespace: ns.Name,
+				},
+				Spec: metalnetv1alpha1.NetworkInterfaceSpec{
+					NetworkRef: corev1.LocalObjectReference{
+						Name: network.Name,
+					},
+					NodeName:   &testNode,
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+					IPs: []metalnetv1alpha1.IP{
+						{
+							Addr: netip.MustParseAddr("10.0.0.3"),
+						},
+					},
+				},
+			}
+
+			// Create the NetworkInterface k8s object
+			Expect(k8sClient.Create(ctx, networkInterface)).To(Succeed())
+
+			Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
+
+			Eventually(Get(networkInterface)).Should(Succeed())
+			By("inspecting the created network interface state")
+			Expect(networkInterface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+			By("fetching the VNI object from dpservice")
+			vniAvail, err := dpdkClient.GetVni(ctx, 111, uint8(dpdk.VniType_VNI_IPV4))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vniAvail.Spec.InUse).To(BeTrue())
+
+			By("creating second network to use in peering")
+			network2 := &metalnetv1alpha1.Network{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-network2",
+					Namespace: ns.Name,
+				},
+				Spec: metalnetv1alpha1.NetworkSpec{
+					ID:        112,
+					PeeredIDs: []int32{network.Spec.ID},
+				},
+			}
+			Expect(k8sClient.Create(ctx, network2)).To(Succeed())
+
+			By("ensuring network is created")
+			Eventually(Get(network2)).Should(Succeed())
+			// Create and initialize network reconciler
+			Expect(networkReconcile(ctx, *network2)).To(Succeed())
+
+			By("defining a new NetworkInterface object to use created network")
+			networkInterface2 := &metalnetv1alpha1.NetworkInterface{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-network-interface2",
+					Namespace: ns.Name,
+				},
+				Spec: metalnetv1alpha1.NetworkInterfaceSpec{
+					NetworkRef: corev1.LocalObjectReference{
+						Name: "test-network2",
+					},
+					NodeName:   &testNode,
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+					IPs: []metalnetv1alpha1.IP{
+						{
+							Addr: netip.MustParseAddr("10.0.0.4"),
+						},
+					},
+				},
+			}
+
+			// Create the NetworkInterface k8s object
+			Expect(k8sClient.Create(ctx, networkInterface2)).To(Succeed())
+
+			Expect(ifaceReconcile(ctx, *networkInterface2)).To(Succeed())
+			// Fetch the updated Iface object from k8s
+			Eventually(Get(networkInterface2)).Should(Succeed())
+			Expect(networkInterface2.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+			By("fetching the VNI object from dpservice")
+			vniAvail, err = dpdkClient.GetVni(ctx, 112, uint8(dpdk.VniType_VNI_IPV4))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vniAvail.Spec.InUse).To(BeTrue())
+
+			Expect(networkReconcile(ctx, *network)).To(Succeed())
+			Expect(networkReconcile(ctx, *network2)).To(Succeed())
+
+			By("validating peering status")
+			Eventually(Object(network)).Should(SatisfyAll(
+				HaveField("Status.Peerings", ConsistOf(metalnetv1alpha1.NetworkPeeringStatus{
+					ID:    network2.Spec.ID,
+					State: metalnetv1alpha1.NetworkPeeringStateReady,
+				}))))
+
+			Eventually(Object(network2)).Should(SatisfyAll(
+				HaveField("Status.Peerings", ConsistOf(metalnetv1alpha1.NetworkPeeringStatus{
+					ID:    network.Spec.ID,
+					State: metalnetv1alpha1.NetworkPeeringStateReady,
+				}))))
+
+			// Deletes the k8s network object after spec is completed
+			DeferCleanup(func(ctx SpecContext) {
+				Expect(k8sClient.Delete(ctx, networkInterface)).To(Succeed())
+				Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, networkInterface2)).To(Succeed())
+				Expect(ifaceReconcile(ctx, *networkInterface2)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, network2)).To(Succeed())
+				Expect(networkReconcile(ctx, *network2)).To(Succeed())
+			})
+
 		})
 	})
 

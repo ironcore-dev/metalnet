@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
 
@@ -100,7 +101,7 @@ func (r *NetworkReconciler) delete(ctx context.Context, log logr.Logger, network
 	log.V(1).Info("Deleted default route if existed")
 
 	log.V(1).Info("Deleting peered VNIs")
-	if err := r.deletePeeredVNIs(ctx, log, network, vni); err != nil {
+	if err := r.deletePeeredVNIs(ctx, log, vni); err != nil {
 		return ctrl.Result{}, err
 	}
 	log.V(1).Info("Deleted peered VNIs")
@@ -293,6 +294,13 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 	missing := r.setDifference(mbPeerVnis, specPeerVnis)
 	added := r.setDifference(specPeerVnis, mbPeerVnis)
 
+	statusPeerVnis := map[uint32]metalnetv1alpha1.NetworkPeeringState{}
+	for _, v := range network.Status.Peerings {
+		statusPeerVnis[uint32(v.ID)] = v.State
+	}
+
+	var errs []error
+
 	if missing.Len() == 0 && added.Len() == 0 {
 		if mbPeerVnis.Len() == 0 {
 			return nil
@@ -301,9 +309,15 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 		for _, peeredVNI := range mbPeerVnis.UnsortedList() {
 			if !ownVniAvail {
 				if err := r.MetalnetCache.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
-					return err
+					errs = append(errs, err)
+					continue
 				}
 			}
+			delete(statusPeerVnis, peeredVNI)
+		}
+
+		if err := errors.Join(errs...); err != nil {
+			return fmt.Errorf("error removing vnis from peer vnis: %w", err)
 		}
 	}
 
@@ -312,64 +326,114 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 			log.V(1).Info("Checking the existence of the peeredVNI in dp-service (missing)", "peeredVNI", peeredVNI)
 			peeredVniAvail, err := r.DPDK.GetVni(ctx, peeredVNI, 0)
 			if err != nil {
-				return err
+				errs = append(errs, err)
+				continue
 			}
 			log.V(1).Info("Checked the existence of the peeredVNI in dp-service (missing)", "peeredVNI", peeredVNI, "peeredVniAvail", peeredVniAvail)
 
 			if err := r.MetalnetCache.RemoveVniFromPeerVnis(vni, peeredVNI); err != nil {
-				return err
+				errs = append(errs, err)
+				continue
 			}
 			if !peeredVniAvail.Spec.InUse {
 				if err := r.unsubscribeIfSubscribed(ctx, peeredVNI); err != nil {
-					return err
+					errs = append(errs, err)
+					continue
 				}
 			} else if peeredVniAvail.Spec.InUse && ownVniAvail {
 				if err := r.MetalnetMBClient.CleanupNotPeeredRoutes(vni); err != nil {
-					return err
+					errs = append(errs, err)
+					continue
 				}
 				if err := r.MetalnetMBClient.CleanupNotPeeredRoutes(peeredVNI); err != nil {
-					return err
+					errs = append(errs, err)
+					continue
 				}
 			} else {
 				if err := r.MetalnetMBClient.CleanupNotPeeredRoutes(vni); err != nil {
-					return err
+					errs = append(errs, err)
+					continue
 				}
 			}
+
+			delete(statusPeerVnis, peeredVNI)
 		}
 
 		for _, peeredVNI := range added.UnsortedList() {
 			if !ownVniAvail {
 				return nil
 			}
+			statusPeerVnis[peeredVNI] = metalnetv1alpha1.NetworkPeeringStatePending
 			log.V(1).Info("Checking the existence of the peeredVNI in dp-service (added)", "peeredVNI", peeredVNI)
 			peeredVniAvail, err := r.DPDK.GetVni(ctx, peeredVNI, 0)
 			if err != nil {
-				return err
+				statusPeerVnis[peeredVNI] = metalnetv1alpha1.NetworkPeeringStateError
+				errs = append(errs, err)
+				continue
 			}
 			log.V(1).Info("Checked the existence of the peeredVNI in dp-service (added)", "peeredVNI", peeredVNI, "peeredVniAvail", peeredVniAvail)
 			if err := r.MetalnetCache.AddVniToPeerVnis(vni, peeredVNI); err != nil {
-				return err
+				statusPeerVnis[peeredVNI] = metalnetv1alpha1.NetworkPeeringStateError
+				errs = append(errs, err)
+				continue
 			}
 			if ownVniAvail && !peeredVniAvail.Spec.InUse {
 				if err := r.subscribeIfNotSubscribed(ctx, peeredVNI); err != nil {
-					return err
+					statusPeerVnis[peeredVNI] = metalnetv1alpha1.NetworkPeeringStateError
+					errs = append(errs, err)
+					continue
 				}
 			}
 			if ownVniAvail && peeredVniAvail.Spec.InUse {
 				if err := r.recycleVNISubscription(ctx, vni); err != nil {
-					return err
+					statusPeerVnis[peeredVNI] = metalnetv1alpha1.NetworkPeeringStateError
+					errs = append(errs, err)
+					continue
 				}
 				if err := r.recycleVNISubscription(ctx, peeredVNI); err != nil {
-					return err
+					statusPeerVnis[peeredVNI] = metalnetv1alpha1.NetworkPeeringStateError
+					errs = append(errs, err)
+					continue
 				}
 			}
+
+			statusPeerVnis[peeredVNI] = metalnetv1alpha1.NetworkPeeringStateReady
 		}
 	}
 
+	newStatusPeerings := make([]metalnetv1alpha1.NetworkPeeringStatus, 0, len(statusPeerVnis))
+	for peeredId, status := range statusPeerVnis {
+		newStatusPeerings = append(newStatusPeerings, metalnetv1alpha1.NetworkPeeringStatus{
+			ID:    int32(peeredId),
+			State: status,
+		})
+
+	}
+	log.V(1).Info("Updating network status peerings", "", newStatusPeerings)
+	if err := r.patchStatus(ctx, network, func() {
+		network.Status.Peerings = newStatusPeerings
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("error patching network peerings status: %w", err))
+	}
+
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("error reconciling peered VNIs: %w", err)
+	}
 	return nil
 }
 
-func (r *NetworkReconciler) deletePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32) error {
+func (r *NetworkReconciler) patchStatus(ctx context.Context, network *metalnetv1alpha1.Network, mutate func()) error {
+	base := network.DeepCopy()
+
+	mutate()
+
+	if err := r.Status().Patch(ctx, network, client.MergeFrom(base)); err != nil {
+		return fmt.Errorf("error updating network status peerings: %w", err)
+	}
+	return nil
+}
+
+func (r *NetworkReconciler) deletePeeredVNIs(ctx context.Context, log logr.Logger, vni uint32) error {
 
 	// the ok flag is ignored because an empty set is returned if the VNI doesn't exist, and the loop below is skipped
 	mbPeerVnis, _ := r.MetalnetCache.GetPeerVnis(vni)
