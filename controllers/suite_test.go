@@ -130,7 +130,7 @@ var _ = BeforeSuite(func() {
 	logger := zap.New(zap.UseFlagOptions(&opts))
 
 	metalnetCache = internal.NewMetalnetCache(&logger)
-	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr, metalbond.ClientOptions{
+	metalnetMBClient = metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr, metalbond.ClientOptions{
 		IPv4Only:         true,
 		PreferredNetwork: nil,
 	})

@@ -266,7 +266,6 @@ func (c *MetalnetClient) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.Nex
 
 func (c *MetalnetClient) CleanupNotPeeredRoutes(vni uint32) error {
 	ctx := context.TODO()
-
 	routes, err := c.dpdk.ListRoutes(ctx, vni)
 	if err != nil {
 		return fmt.Errorf("error listing dpdk routes for vni %d: %w", vni, err)

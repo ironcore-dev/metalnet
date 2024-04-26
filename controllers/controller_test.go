@@ -217,6 +217,27 @@ var _ = Describe("Network Controller", Label("network"), Ordered, func() {
 					State: metalnetv1alpha1.NetworkPeeringStateReady,
 				}))))
 
+			By("Removing peeredIDs")
+			// Update the k8s network object
+			baseNetwork := network.DeepCopy()
+			network.Spec.PeeredIDs = []int32{}
+			Expect(k8sClient.Patch(ctx, network, client.MergeFrom(baseNetwork))).To(Succeed())
+
+			// Update the k8s network object
+			baseNetwork2 := network2.DeepCopy()
+			network2.Spec.PeeredIDs = []int32{}
+			Expect(k8sClient.Patch(ctx, network2, client.MergeFrom(baseNetwork2))).To(Succeed())
+
+			Expect(networkReconcile(ctx, *network)).To(Succeed())
+			Expect(networkReconcile(ctx, *network2)).To(Succeed())
+
+			By("Verifying peering information removed from status")
+			Eventually(Object(network)).Should(SatisfyAll(
+				HaveField("Status.Peerings", BeEmpty())))
+
+			Eventually(Object(network2)).Should(SatisfyAll(
+				HaveField("Status.Peerings", BeEmpty())))
+
 			// Deletes the k8s network object after spec is completed
 			DeferCleanup(func(ctx SpecContext) {
 				Expect(k8sClient.Delete(ctx, networkInterface)).To(Succeed())
