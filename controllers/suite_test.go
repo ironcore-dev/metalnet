@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 	// setup dpservice client
 	ctxGrpc, ctxCancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
 
-	conn, err = grpc.NewClient(dpserviceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err = grpc.NewClient(dpserviceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	Expect(err).NotTo(HaveOccurred())
 
 	dpdkProtoClient = dpdkproto.NewDPDKironcoreClient(conn)
