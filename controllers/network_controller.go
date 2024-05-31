@@ -11,9 +11,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/ironcore-dev/controller-utils/clientutils"
-	dpdk "github.com/ironcore-dev/dpservice-go/api"
-	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
-	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
+	dpdk "github.com/ironcore-dev/dpservice/go/dpservice-go/api"
+	dpdkclient "github.com/ironcore-dev/dpservice/go/dpservice-go/client"
+	dpdkerrors "github.com/ironcore-dev/dpservice/go/dpservice-go/errors"
 	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	"github.com/ironcore-dev/metalnet/internal"
 	"github.com/ironcore-dev/metalnet/metalbond"

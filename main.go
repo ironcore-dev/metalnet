@@ -32,9 +32,9 @@ import (
 	"github.com/ironcore-dev/metalnet/netfns"
 	"github.com/ironcore-dev/metalnet/sysfs"
 
-	dpdk "github.com/ironcore-dev/dpservice-go/api"
-	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
-	dpdkproto "github.com/ironcore-dev/dpservice-go/proto"
+	dpdk "github.com/ironcore-dev/dpservice/go/dpservice-go/api"
+	dpdkclient "github.com/ironcore-dev/dpservice/go/dpservice-go/client"
+	dpdkproto "github.com/ironcore-dev/dpservice/go/dpservice-go/proto"
 	mb "github.com/ironcore-dev/metalbond"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -191,7 +191,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, dpserviceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.NewClient(dpserviceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		setupLog.Error(err, "unable create dpdk client")
 		os.Exit(1)

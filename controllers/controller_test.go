@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
-	dpdkerrors "github.com/ironcore-dev/dpservice-go/errors"
-	dpdk "github.com/ironcore-dev/dpservice-go/proto"
+	dpdkerrors "github.com/ironcore-dev/dpservice/go/dpservice-go/errors"
+	dpdk "github.com/ironcore-dev/dpservice/go/dpservice-go/proto"
 	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )

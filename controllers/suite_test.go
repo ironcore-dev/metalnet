@@ -24,8 +24,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	dpdkclient "github.com/ironcore-dev/dpservice-go/client"
-	dpdkproto "github.com/ironcore-dev/dpservice-go/proto"
+	dpdkclient "github.com/ironcore-dev/dpservice/go/dpservice-go/client"
+	dpdkproto "github.com/ironcore-dev/dpservice/go/dpservice-go/proto"
 	mb "github.com/ironcore-dev/metalbond"
 	networkingv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	"github.com/ironcore-dev/metalnet/internal"
@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 	// setup dpservice client
 	ctxGrpc, ctxCancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
 
-	conn, err = grpc.DialContext(ctxGrpc, dpserviceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err = grpc.NewClient(dpserviceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	Expect(err).NotTo(HaveOccurred())
 
 	dpdkProtoClient = dpdkproto.NewDPDKironcoreClient(conn)
