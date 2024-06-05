@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -479,13 +478,13 @@ func (r *NetworkReconciler) SetupWithManager(mgr ctrl.Manager, metalnetCache cac
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metalnetv1alpha1.Network{}).
 		WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
-		WatchesRawSource(
-			source.Kind(metalnetCache, &metalnetv1alpha1.NetworkInterface{}),
+		Watches(
+			&metalnetv1alpha1.NetworkInterface{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForNetworkInterface),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		WatchesRawSource(
-			source.Kind(metalnetCache, &metalnetv1alpha1.LoadBalancer{}),
+		Watches(
+			&metalnetv1alpha1.LoadBalancer{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForLoadBalancer),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).

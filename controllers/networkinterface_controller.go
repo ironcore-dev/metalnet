@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -1605,12 +1604,12 @@ func (r *NetworkInterfaceReconciler) SetupWithManager(mgr ctrl.Manager, metalnet
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metalnetv1alpha1.NetworkInterface{}).
-		WatchesRawSource(
-			source.Kind(metalnetCache, &metalnetv1alpha1.Network{}),
+		Watches(
+			&metalnetv1alpha1.Network{},
 			r.enqueueNetworkInterfacesReferencingNetwork(ctx, log),
 		).
-		WatchesRawSource(
-			source.Kind(metalnetCache, &metalnetv1alpha1.LoadBalancer{}),
+		Watches(
+			&metalnetv1alpha1.LoadBalancer{},
 			r.enqueueNetworkInterfacesReferencingLoadBalancer(ctx, log),
 		).
 		Complete(r)
