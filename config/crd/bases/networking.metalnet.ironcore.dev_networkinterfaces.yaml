@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: networkinterfaces.networking.metalnet.ironcore.dev
 spec:
   group: networking.metalnet.ironcore.dev
@@ -55,14 +55,19 @@ spec:
         description: NetworkInterface is the Schema for the networkinterfaces API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -84,15 +89,15 @@ spec:
                       description: FirewallRuleDirection is the direction of the rule.
                       type: string
                     firewallRuleID:
-                      description: UID is a type that holds unique ID values, including
-                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
-                        to string.  Being a type captures intent and helps make sure
-                        that UIDs and names do not get conflated.
+                      description: |-
+                        UID is a type that holds unique ID values, including UUIDs.  Because we
+                        don't ONLY use UUIDs, this is an alias to string.  Being a type captures
+                        intent and helps make sure that UIDs and names do not get conflated.
                       type: string
                     ipFamily:
-                      description: IPFamily represents the IP Family (IPv4 or IPv6).
-                        This type is used to express the family of an IP expressed
-                        by a type (e.g. service.spec.ipFamilies).
+                      description: |-
+                        IPFamily represents the IP Family (IPv4 or IPv6). This type is used
+                        to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
                       type: string
                     priority:
                       default: 1000
@@ -164,20 +169,21 @@ spec:
                   type: object
                 type: array
               ipFamilies:
-                description: IPFamilies defines which IPFamilies this NetworkInterface
-                  is supporting Only one IP supported at the moment.
+                description: |-
+                  IPFamilies defines which IPFamilies this NetworkInterface is supporting
+                  Only one IP supported at the moment.
                 items:
-                  description: IPFamily represents the IP Family (IPv4 or IPv6). This
-                    type is used to express the family of an IP expressed by a type
-                    (e.g. service.spec.ipFamilies).
+                  description: |-
+                    IPFamily represents the IP Family (IPv4 or IPv6). This type is used
+                    to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
                   type: string
                 maxItems: 2
                 minItems: 1
                 type: array
               ips:
-                description: IPs are the provided IPs or EphemeralIPs which should
-                  be assigned to this NetworkInterface Only one IP supported at the
-                  moment.
+                description: |-
+                  IPs are the provided IPs or EphemeralIPs which should be assigned to this NetworkInterface
+                  Only one IP supported at the moment.
                 items:
                   type: string
                 maxItems: 2
@@ -225,8 +231,15 @@ spec:
                   to
                 properties:
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    default: ""
+                    description: |-
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      TODO: Add other useful fields. apiVersion, kind, uid?
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic

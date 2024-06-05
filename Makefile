@@ -159,8 +159,8 @@ ADDLICENSE ?= $(LOCALBIN)/addlicense
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.13.0
-GOLANGCILINT_VERSION ?= v1.55.2
+CONTROLLER_TOOLS_VERSION ?= v0.15.0
+GOLANGCILINT_VERSION ?= v1.59.0
 ADDLICENSE_VERSION ?= v1.1.1
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
