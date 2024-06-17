@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	github.com/go-logr/logr v1.4.2
-	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	github.com/ironcore-dev/controller-utils v0.9.3
 	github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.8
 	github.com/ironcore-dev/ironcore v0.1.2
