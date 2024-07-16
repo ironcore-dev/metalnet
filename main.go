@@ -89,6 +89,7 @@ func main() {
 	var publicVNI int
 	var metalnetDir string
 	var preferNetwork string
+	var multiportEswitchMode bool
 	var initAvailable []ghw.PCIAddress
 	var defaultRouterAddr metalbond.DefaultRouterAddress
 
@@ -103,6 +104,7 @@ func main() {
 	flag.BoolVar(&enableIPv6Support, "enable-ipv6", false, "Enable IPv6 support")
 	flag.IntVar(&publicVNI, "public-vni", 100, "Virtual network identifier used for public routing announcements.")
 	flag.IPVar(&routerAddress, "router-address", net.IP{}, "The address of the next router.")
+	flag.BoolVar(&multiportEswitchMode, "multiport-eswitch", false, "Enable multiport eswitch support")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -352,6 +354,7 @@ func main() {
 		EnableIPv6Support:           enableIPv6Support,
 		BluefieldDetected:           bluefieldDetected,
 		BluefieldHostDefaultBusAddr: bluefieldHostDefaultBusAddr,
+		MultiportEswitchMode:        multiportEswitchMode,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkInterface")
 		os.Exit(1)

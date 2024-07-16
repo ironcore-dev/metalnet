@@ -91,6 +91,7 @@ type NetworkInterfaceReconciler struct {
 	EnableIPv6Support           bool
 	BluefieldDetected           bool
 	BluefieldHostDefaultBusAddr string
+	MultiportEswitchMode        bool
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
@@ -1328,7 +1329,12 @@ func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (s
 	pciDev, err := r.SysFS.PCIDevice(addr)
 	if err != nil {
 		// Calculate based on the offset parameter if sysfs not available
-		return fmt.Sprintf("%s:%s:00.0_representor_vf%d", addr.Domain, addr.Bus, pciFunction-uint64(r.PfToVfOffset)), nil
+
+		if r.MultiportEswitchMode {
+			return fmt.Sprintf("%s:%s:00.0_representor_c0pf0vf%d", addr.Domain, addr.Bus, pciFunction-uint64(r.PfToVfOffset)), nil
+		} else {
+			return fmt.Sprintf("%s:%s:00.0_representor_vf%d", addr.Domain, addr.Bus, pciFunction-uint64(r.PfToVfOffset)), nil
+		}
 	} else {
 		physFn, err := pciDev.Physfn()
 		if err != nil {
@@ -1344,7 +1350,11 @@ func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (s
 		if err != nil {
 			return "", fmt.Errorf("error getting sysfs sriov: %w", err)
 		}
-		return fmt.Sprintf("%s:%s:%s.0_representor_vf%d", physFnAddr.Domain, physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
+		if r.MultiportEswitchMode {
+			return fmt.Sprintf("%s:%s:%s.0_representor_c0pf0vf%d", physFnAddr.Domain, physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
+		} else {
+			return fmt.Sprintf("%s:%s:%s.0_representor_vf%d", physFnAddr.Domain, physFnAddr.Bus, physFnAddr.Device, pciFunction-sriov.Offset), nil
+		}
 	}
 }
 
