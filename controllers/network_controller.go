@@ -309,8 +309,8 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 					errs = append(errs, err)
 					continue
 				}
+				delete(networkPeeringState, peeredVNI)
 			}
-			delete(networkPeeringState, peeredVNI)
 		}
 
 		if err := errors.Join(errs...); err != nil {
