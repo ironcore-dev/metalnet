@@ -217,6 +217,23 @@ var _ = Describe("Network Controller", Label("network"), Ordered, func() {
 					State: metalnetv1alpha1.NetworkPeeringStateReady,
 				}))))
 
+			By("reconciling networks again")
+			Expect(networkReconcile(ctx, *network)).To(Succeed())
+			Expect(networkReconcile(ctx, *network2)).To(Succeed())
+
+			By("validating peering status again")
+			Eventually(Object(network)).Should(SatisfyAll(
+				HaveField("Status.Peerings", ConsistOf(metalnetv1alpha1.NetworkPeeringStatus{
+					ID:    network2.Spec.ID,
+					State: metalnetv1alpha1.NetworkPeeringStateReady,
+				}))))
+
+			Eventually(Object(network2)).Should(SatisfyAll(
+				HaveField("Status.Peerings", ConsistOf(metalnetv1alpha1.NetworkPeeringStatus{
+					ID:    network.Spec.ID,
+					State: metalnetv1alpha1.NetworkPeeringStateReady,
+				}))))
+
 			By("Removing peeredIDs")
 			// Update the k8s network object
 			baseNetwork := network.DeepCopy()
