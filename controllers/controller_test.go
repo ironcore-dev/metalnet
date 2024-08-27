@@ -217,7 +217,7 @@ var _ = Describe("Network Controller", Label("network"), Ordered, func() {
 					State: metalnetv1alpha1.NetworkPeeringStateReady,
 				}))))
 
-			By("reconciling networks again")
+			By("reconciling networks again to see if status is not overwritten")
 			Expect(networkReconcile(ctx, *network)).To(Succeed())
 			Expect(networkReconcile(ctx, *network2)).To(Succeed())
 

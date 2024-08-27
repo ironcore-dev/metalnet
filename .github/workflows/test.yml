@@ -1,9 +1,6 @@
 name: Pull Request Code test
 
 on:
-  push:
-    branches:
-      - fix-network-controller
   pull_request:
     types: [ assigned, opened, synchronize, reopened ]
     paths-ignore:
