@@ -475,16 +475,13 @@ func (r *NetworkReconciler) unsubscribeIfSubscribed(ctx context.Context, vni uin
 func (r *NetworkReconciler) SetupWithManager(mgr ctrl.Manager, metalnetCache cache.Cache) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&metalnetv1alpha1.Network{}).
-		// WithEventFilter(predicate.ResourceVersionChangedPredicate{}).
 		Watches(
 			&metalnetv1alpha1.NetworkInterface{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForNetworkInterface),
-			// builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Watches(
 			&metalnetv1alpha1.LoadBalancer{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForLoadBalancer),
-			// builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Complete(r)
 }
