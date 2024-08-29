@@ -11,7 +11,7 @@ require (
 	github.com/ironcore-dev/metalbond v0.3.5
 	github.com/jaypipes/ghw v0.12.0
 	github.com/onsi/ginkgo/v2 v2.20.2
-	github.com/onsi/gomega v1.34.1
+	github.com/onsi/gomega v1.34.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	google.golang.org/grpc v1.64.0
