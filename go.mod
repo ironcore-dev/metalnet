@@ -14,7 +14,7 @@ require (
 	github.com/onsi/gomega v1.34.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
-	google.golang.org/grpc v1.66.0
+	google.golang.org/grpc v1.66.1
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.30.3
 	k8s.io/client-go v0.30.2
