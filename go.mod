@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/ironcore-dev/controller-utils v0.9.3
 	github.com/ironcore-dev/ironcore v0.1.2
-	github.com/ironcore-dev/metalbond v0.3.5
+	github.com/ironcore-dev/metalbond v0.3.6-0.20241023125747-c161f70a4050
 	github.com/jaypipes/ghw v0.12.0
 	github.com/onmetal/net-dpservice-go v0.1.20
 	github.com/onsi/ginkgo/v2 v2.20.2
@@ -61,8 +61,8 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240123184739-8d48f50f5575 // indirect
-	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
+	github.com/vishvananda/netlink v1.3.0 // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
