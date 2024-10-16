@@ -104,7 +104,7 @@ func main() {
 	flag.BoolVar(&enableIPv6Support, "enable-ipv6", false, "Enable IPv6 support")
 	flag.IntVar(&publicVNI, "public-vni", 100, "Virtual network identifier used for public routing announcements.")
 	flag.IPVar(&routerAddress, "router-address", net.IP{}, "The address of the next router.")
-	flag.BoolVar(&multiportEswitchMode, "multiport-eswitch", false, "Enable multiport eswitch support")
+	flag.BoolVar(&multiportEswitchMode, "multiport-eswitch", false, "Enable multiport eswitch support (can be overridden in metalnet-dir)")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -124,6 +124,15 @@ func main() {
 	if metalbondDebug {
 		log.SetLevel(log.DebugLevel)
 	}
+
+	// detect multiport-eswitch mode automatically (overrides command-line)
+	// Usage example: 'echo "eswitch" > /var/lib/metalnet/mode'
+	modeFilePath := filepath.Join(metalnetDir, "mode")
+	content, err := os.ReadFile(modeFilePath)
+	if err == nil {
+		multiportEswitchMode = strings.TrimSpace(string(content)) == "eswitch"
+	}
+	setupLog.Info(fmt.Sprintf("Multiport Eswitch mode set to: %v", multiportEswitchMode))
 
 	defaultRouterAddr.PublicVNI = uint32(publicVNI)
 	defaultRouterAddr.SetBySubsciption = false
