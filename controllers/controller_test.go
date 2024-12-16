@@ -642,6 +642,65 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 			})
 
+			It("IPv6 Prefixes should add/update/delete successfully", func() {
+				By("adding the IPv6 Prefix")
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("2001:db8::/64"),
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+
+				Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
+
+				// Fetch updated k8s interface object
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.Prefixes).ToNot(BeEmpty())
+				Expect(updatedIface.Spec.Prefixes[0].String()).To(Equal("2001:db8::/64"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("updating the IPv6 Prefix")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("2001:db8:1::/64"),
+				}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				Expect(ifaceReconcile(ctx, *updatedIface)).To(Succeed())
+
+				// Fetch updated k8s interface object
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.Prefixes).ToNot(BeEmpty())
+				Expect(updatedIface.Spec.Prefixes[0].String()).To(Equal("2001:db8:1::/64"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("deleting the IPv6 Prefix")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{}
+
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+
+				Expect(ifaceReconcile(ctx, *updatedIface)).To(Succeed())
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				Expect(updatedIface.Spec.Prefixes).To(BeEmpty())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+
 			It("LoadBalancerTargets should add/update/delete successfully", func() {
 				By("adding the LoadBalancerTarget")
 				patchIface := networkInterface.DeepCopy()

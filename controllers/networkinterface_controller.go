@@ -941,10 +941,7 @@ func (r *NetworkInterfaceReconciler) reconcilePrefixes(ctx context.Context, log 
 
 	specPrefixes := sets.New[netip.Prefix]()
 	for _, specPrefix := range nic.Spec.Prefixes {
-		// only ipv4 is supported for now
-		if specPrefix.Addr().Is4() {
-			specPrefixes.Insert(specPrefix.Prefix)
-		}
+		specPrefixes.Insert(specPrefix.Prefix)
 	}
 
 	// Sort prefixes to have deterministic error event output
