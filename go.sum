@@ -63,8 +63,8 @@ github.com/ironcore-dev/controller-utils v0.9.3 h1:sTrnxSzX5RrLf4B8KrAH2axSC+gxf
 github.com/ironcore-dev/controller-utils v0.9.3/go.mod h1:djKnxDs0Hwxhhc0VmVY8tZnrOrElvrRV2jov/LiCZ2Y=
 github.com/ironcore-dev/ironcore v0.1.2 h1:zYxKEZ+xXeQ7KVBPgYj+W3D4mlR6sCVJaFKUzfuR204=
 github.com/ironcore-dev/ironcore v0.1.2/go.mod h1:ircFIizjXLGUU2r5utcYe/feMnwMZVJuyFZGAWmsmLQ=
-github.com/ironcore-dev/metalbond v0.3.6-0.20241121115301-0459b675843a h1:qCcQybKZXA5VRw5VULQ7zCIPNQn1zF/PckJnX97hJ3k=
-github.com/ironcore-dev/metalbond v0.3.6-0.20241121115301-0459b675843a/go.mod h1:fKmkC85ymwGeKicaVKJtnD+8+4nach2Oi/z82Ajxs9w=
+github.com/ironcore-dev/metalbond v0.3.6-0.20241219074114-8a651cdccf85 h1:RPaz7pkyjpLkM6kO2ZubuQiu/ipSxmhGx2vwAZx92hc=
+github.com/ironcore-dev/metalbond v0.3.6-0.20241219074114-8a651cdccf85/go.mod h1:fCV7JZIvQUcwq05la4p07+4E7iUOPS1fq61h0S9kbK4=
 github.com/jaypipes/ghw v0.12.0 h1:xU2/MDJfWmBhJnujHY9qwXQLs3DBsf0/Xa9vECY0Tho=
 github.com/jaypipes/ghw v0.12.0/go.mod h1:jeJGbkRB2lL3/gxYzNYzEDETV1ZJ56OKr+CSeSEym+g=
 github.com/jaypipes/pcidb v1.0.0 h1:vtZIfkiCUE42oYbJS0TAq9XSfSmcsgo9IdxSm9qzYU8=

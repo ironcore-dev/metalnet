@@ -434,6 +434,18 @@ func main() {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
+
+	if err := mgr.AddHealthzCheck("metalbond-peers-health", metalbondPeersHealthCheck(
+		mbInstance,
+		metalbondPeers,
+		metalbondTxChanCapacity,
+		metalbondRxChanEventCapacity,
+		metalbondRxChanDataUpdateCapacity,
+	)); err != nil {
+		setupLog.Error(err, "unable to set up metalbond peers health check")
+		os.Exit(1)
+	}
+
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
@@ -443,5 +455,39 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+func metalbondPeersHealthCheck(mbInstance *mb.MetalBond, metalbondPeers []string, txChanCapacity, rxChanEventCapacity, rxChanDataUpdateCapacity int) func(req *http.Request) error {
+	return func(_ *http.Request) error {
+		var unhealthyPeers []string
+		for _, peer := range metalbondPeers {
+			lastKeepalive, err := mbInstance.PeerLastKeepaliveSent(peer)
+			if err != nil {
+				return fmt.Errorf("error retrieving last keepalive for peer %s: %w", peer, err)
+			}
+
+			// Check if the last keepalive is older than 1 minute
+			if time.Since(lastKeepalive) > 1*time.Minute {
+				unhealthyPeers = append(unhealthyPeers, peer)
+
+				// Attempt to remove the peer
+				if err := mbInstance.RemovePeer(peer); err != nil {
+					return fmt.Errorf("failed to remove peer %s: %w", peer, err)
+				}
+
+				// Attempt to recreate the peer
+				if err := mbInstance.AddPeer(peer, "", txChanCapacity, rxChanEventCapacity, rxChanDataUpdateCapacity); err != nil {
+					return fmt.Errorf("failed to recreate peer %s: %w", peer, err)
+				}
+			}
+		}
+
+		// If any peers were unhealthy, log a warning
+		if len(unhealthyPeers) > 0 {
+			log.Printf("Recreated unhealthy peers: %v", unhealthyPeers)
+		}
+
+		return nil
 	}
 }
