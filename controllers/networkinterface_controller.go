@@ -895,7 +895,10 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 			log.V(1).Info("Bluefield detected. Converting PCI Bus to the host PCI bus", "PCIAddress", pciAddr)
 		}
 		if r.TapDeviceMode {
-			nic.Status.TAPDevice.Name = pciAddr.Device
+			pciAddr.Device = strings.ReplaceAll(strings.ReplaceAll(pciAddr.Device, ":", ""), ".", "")
+			nic.Status.TAPDevice = &metalnetv1alpha1.TAPDevice{
+				Name: pciAddr.Device,
+			}
 		} else {
 			nic.Status.PCIAddress = &metalnetv1alpha1.PCIAddress{
 				Bus:      pciAddr.Bus,
@@ -1314,9 +1317,26 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 	return addr, *iface.Spec.UnderlayRoute, false, nil
 }
 
+func (r *NetworkInterfaceReconciler) processTAPDeviceString(device string) (string, error) {
+	cleanedDevice := strings.ReplaceAll(strings.ReplaceAll(device, ":", ""), ".", "")
+
+	const prefix = "dtapvf_"
+	if strings.HasPrefix(cleanedDevice, prefix) {
+		numStr := cleanedDevice[len(prefix):]
+		number, err := strconv.Atoi(numStr)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse device number in %q: %w", cleanedDevice, err)
+		}
+
+		return fmt.Sprintf("net_tap%d", number+2), nil
+	}
+
+	return cleanedDevice, nil
+}
+
 func (r *NetworkInterfaceReconciler) convertToDPDKDevice(addr ghw.PCIAddress) (string, error) {
-	if strings.Contains(addr.Device, "tap") {
-		return strings.ReplaceAll(strings.ReplaceAll(addr.Device, ":", ""), ".", ""), nil
+	if strings.Contains(addr.Device, "dtap") {
+		return r.processTAPDeviceString(addr.Device)
 	}
 	pciFunction, err := strconv.ParseUint(addr.Function, 8, 64)
 	if err != nil {

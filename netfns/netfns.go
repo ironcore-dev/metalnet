@@ -65,7 +65,13 @@ func (s *fileClaimStore) Create(uid types.UID, addr ghw.PCIAddress) error {
 		return ErrClaimAlreadyExists
 	}
 
-	data := []byte(addr.String())
+	var data []byte
+	if !s.isTAPStore {
+		data = []byte(addr.String())
+	} else {
+		data = []byte(addr.Device)
+	}
+
 	return os.WriteFile(filename, data, filePerm)
 }
 

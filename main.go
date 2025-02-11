@@ -177,7 +177,7 @@ func main() {
 			}
 		}
 	} else {
-		initAvailable, err = netfns.CollectTAPFunctions([]string{"net_tap3", "net_tap4", "net_tap5"})
+		initAvailable, err = netfns.CollectTAPFunctions([]string{"dtapvf_0", "dtapvf_1", "dtapvf_2", "dtapvf_3"})
 		if err != nil {
 			setupLog.Error(err, "unable to collect TAP functions")
 			os.Exit(1)

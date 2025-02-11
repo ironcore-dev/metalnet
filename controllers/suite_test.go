@@ -101,7 +101,7 @@ var _ = BeforeSuite(func() {
 	claimStore, err := netfns.NewFileClaimStore(filepath.Join(metalnetDir, "netfns", "claims"), true)
 	Expect(err).NotTo(HaveOccurred())
 
-	initAvailable, err := netfns.CollectTAPFunctions([]string{"net_tap4", "net_tap5"})
+	initAvailable, err := netfns.CollectTAPFunctions([]string{"dtapvf_2", "dtapvf_3"})
 	Expect(err).NotTo(HaveOccurred())
 
 	netFnsManager, err = netfns.NewManager(claimStore, initAvailable)
