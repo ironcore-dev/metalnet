@@ -364,6 +364,7 @@ func main() {
 		BluefieldDetected:           bluefieldDetected,
 		BluefieldHostDefaultBusAddr: bluefieldHostDefaultBusAddr,
 		MultiportEswitchMode:        multiportEswitchMode,
+		TapDeviceMode:               tapDeviceMod,
 	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkInterface")
 		os.Exit(1)

@@ -309,6 +309,12 @@ spec:
               state:
                 description: State is the NetworkInterfaceState of the NetworkInterface.
                 type: string
+              tapDevice:
+                description: TAPDevice is a TAP device.
+                properties:
+                  name:
+                    type: string
+                type: object
               virtualIP:
                 description: VirtualIP is any virtual ip assigned to the NetworkInterface.
                 type: string

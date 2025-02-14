@@ -92,6 +92,7 @@ type NetworkInterfaceReconciler struct {
 	BluefieldDetected           bool
 	BluefieldHostDefaultBusAddr string
 	MultiportEswitchMode        bool
+	TapDeviceMode               bool
 }
 
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=networkinterfaces,verbs=get;list;watch;create;update;patch;delete
@@ -893,12 +894,17 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 			pciAddr.Bus = r.BluefieldHostDefaultBusAddr
 			log.V(1).Info("Bluefield detected. Converting PCI Bus to the host PCI bus", "PCIAddress", pciAddr)
 		}
-		nic.Status.PCIAddress = &metalnetv1alpha1.PCIAddress{
-			Bus:      pciAddr.Bus,
-			Domain:   pciAddr.Domain,
-			Slot:     pciAddr.Device,
-			Function: pciAddr.Function,
+		if r.TapDeviceMode {
+			nic.Status.TAPDevice.Name = pciAddr.Device
+		} else {
+			nic.Status.PCIAddress = &metalnetv1alpha1.PCIAddress{
+				Bus:      pciAddr.Bus,
+				Domain:   pciAddr.Domain,
+				Slot:     pciAddr.Device,
+				Function: pciAddr.Function,
+			}
 		}
+
 		if virtualIPErr == nil {
 			nic.Status.VirtualIP = nic.Spec.VirtualIP
 		}

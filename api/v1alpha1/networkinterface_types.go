@@ -46,6 +46,8 @@ type NetworkInterfaceSpec struct {
 type NetworkInterfaceStatus struct {
 	PCIAddress *PCIAddress `json:"pciAddress,omitempty"`
 
+	TAPDevice *TAPDevice `json:"tapDevice,omitempty"`
+
 	// VirtualIP is any virtual ip assigned to the NetworkInterface.
 	VirtualIP *IP `json:"virtualIP,omitempty"`
 
@@ -60,6 +62,11 @@ type NetworkInterfaceStatus struct {
 
 	// State is the NetworkInterfaceState of the NetworkInterface.
 	State NetworkInterfaceState `json:"state,omitempty"`
+}
+
+// TAPDevice is a TAP device.
+type TAPDevice struct {
+	Name string `json:"name,omitempty"`
 }
 
 // PCIAddress is a PCI address.
