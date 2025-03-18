@@ -143,7 +143,7 @@ var _ = BeforeSuite(func() {
 	mbInstance := mb.NewMetalBond(config, metalnetMBClient)
 	metalbondRouteUtil = metalbond.NewMBRouteUtil(mbInstance)
 
-	err = mbInstance.AddPeer("[::1]:4711", "")
+	err = mbInstance.AddPeer("[::1]:4711", "", 100, 10, 100)
 	Expect(err).NotTo(HaveOccurred())
 })
 
