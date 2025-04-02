@@ -168,6 +168,10 @@ spec:
                   - ipFamily
                   type: object
                 type: array
+              hostname:
+                description: Hostname is the hostname which should be announced by
+                  the network interface.
+                type: string
               ipFamilies:
                 description: |-
                   IPFamilies defines which IPFamilies this NetworkInterface is supporting

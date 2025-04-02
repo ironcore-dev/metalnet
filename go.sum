@@ -63,6 +63,10 @@ github.com/ironcore-dev/controller-utils v0.9.3 h1:sTrnxSzX5RrLf4B8KrAH2axSC+gxf
 github.com/ironcore-dev/controller-utils v0.9.3/go.mod h1:djKnxDs0Hwxhhc0VmVY8tZnrOrElvrRV2jov/LiCZ2Y=
 github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.11 h1:m+enb4dHIfhL6s5ca5PFNq6leLnb1nvmXefIRyGlsgE=
 github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.11/go.mod h1:d5x2tPmu1yqrVHac/FvL+MFOeEb3IT4gn7Bj4+Xkj8M=
+github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.14-0.20250408102508-69f164478fe9 h1:Nz5L0DkFGyzn8qSpf3gkHUO+ATXTMv7oRhjXjAq2Nbw=
+github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.14-0.20250408102508-69f164478fe9/go.mod h1:d5x2tPmu1yqrVHac/FvL+MFOeEb3IT4gn7Bj4+Xkj8M=
+github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.16 h1:gRd8IUsbMhN+5ZU9Ql8E+7lR88VKVmSKmIF0w2lCc14=
+github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.16/go.mod h1:d5x2tPmu1yqrVHac/FvL+MFOeEb3IT4gn7Bj4+Xkj8M=
 github.com/ironcore-dev/ironcore v0.1.2 h1:zYxKEZ+xXeQ7KVBPgYj+W3D4mlR6sCVJaFKUzfuR204=
 github.com/ironcore-dev/ironcore v0.1.2/go.mod h1:ircFIizjXLGUU2r5utcYe/feMnwMZVJuyFZGAWmsmLQ=
 github.com/ironcore-dev/metalbond v0.3.5 h1:H+kXba0F/m2rjcAClU0I8Am/gBsFOQkf5icJBC2S8/I=

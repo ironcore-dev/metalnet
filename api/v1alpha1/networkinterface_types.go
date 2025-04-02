@@ -40,6 +40,8 @@ type NetworkInterfaceSpec struct {
 	FirewallRules []FirewallRule `json:"firewallRules,omitempty"`
 	// MeteringRate are the metering parameters to be applied to this interface.
 	MeteringRate *MeteringParameters `json:"meteringRate,omitempty"`
+	// Hostname is the hostname which should be announced by the network interface.
+	Hostname *string `json:"hostname,omitempty"`
 }
 
 // NetworkInterfaceStatus defines the observed state of NetworkInterface

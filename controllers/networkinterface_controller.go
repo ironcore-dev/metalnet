@@ -1245,6 +1245,8 @@ func (r *NetworkInterfaceReconciler) getInterfaceMeteringParams(nic *metalnetv1a
 
 func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log logr.Logger, nic *metalnetv1alpha1.NetworkInterface, vni uint32) (*ghw.PCIAddress, netip.Addr, bool, error) {
 	log.V(1).Info("Getting dpdk interface")
+	var hostName = ""
+
 	iface, err := r.DPDK.GetInterface(ctx, string(nic.UID))
 	if err != nil {
 		if !dpdkerrors.IsStatusErrorCode(err, dpdkerrors.NOT_FOUND) {
@@ -1277,6 +1279,10 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 			return nil, netip.Addr{}, false, fmt.Errorf("error getting metering params: %w", err)
 		}
 
+		if nic.Spec.Hostname != nil {
+			hostName = *nic.Spec.Hostname
+		}
+
 		iface, err := r.DPDK.CreateInterface(ctx, &dpdk.Interface{
 			InterfaceMeta: dpdk.InterfaceMeta{ID: string(nic.UID)},
 			Spec: dpdk.InterfaceSpec{
@@ -1285,6 +1291,7 @@ func (r *NetworkInterfaceReconciler) applyInterface(ctx context.Context, log log
 				IPv4:     &primaryIpv4,
 				IPv6:     &primaryIpv6,
 				Metering: meteringParams,
+				HostName: hostName,
 			},
 		})
 		if err != nil {

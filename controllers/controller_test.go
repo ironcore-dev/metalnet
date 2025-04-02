@@ -133,6 +133,7 @@ var _ = Describe("Network Controller", Label("network"), Ordered, func() {
 							Addr: netip.MustParseAddr("10.0.0.3"),
 						},
 					},
+					Hostname: &testHost,
 				},
 			}
 
