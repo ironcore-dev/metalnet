@@ -33,8 +33,10 @@ spec:
               fieldPath: spec.nodeName
         args:
         - --node-name=$(NODE_NAME)
+        - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
+        ports: []
         resources:
           limits:
             cpu: 500m
