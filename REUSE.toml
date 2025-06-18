@@ -1,0 +1,33 @@
+version = 1
+SPDX-PackageName = "metalnet"
+SPDX-PackageSupplier = "IronCore authors <ospo@sap.com>"
+SPDX-PackageDownloadLocation = "https://github.com/ironcore-dev/metalnet"
+
+[[annotations]]
+path = [
+    ".github/**",
+    ".gitignore",
+    ".golangci.yaml",
+    "CODEOWNERS",
+    "Dockerfile",
+    "Makefile",
+    "PROJECT",
+    "config/**",
+    "go.mod",
+    "go.sum",
+    "hack/**"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 SAP SE or an SAP affiliate company and IronCore contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+
+[[annotations]]
+path = [
+    "docs/**",
+    "*README.md",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 SAP SE or an SAP affiliate company and IronCore contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
