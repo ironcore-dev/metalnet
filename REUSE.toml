@@ -25,7 +25,7 @@ SPDX-License-Identifier = "Apache-2.0"
 [[annotations]]
 path = [
     "docs/**",
-    "*README.md",
+    "**/README.md",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2023 SAP SE or an SAP affiliate company and IronCore contributors"
