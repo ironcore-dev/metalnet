@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -114,7 +115,7 @@ func (r *NetworkInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if nodeName := nic.Spec.NodeName; nodeName == nil || *nodeName != r.NodeName {
+	if !isNetworkInterfaceAssignedToNode(nic, r.NodeName) {
 		log.V(1).Info("Network interface is not assigned to this node", "NodeName", nic.Spec.NodeName)
 		return ctrl.Result{}, nil
 	}
@@ -588,7 +589,7 @@ func (r *NetworkInterfaceReconciler) deleteExistingNATIP(ctx context.Context, lo
 	if err := r.removeNATIPRouteIfExists(ctx, natLocal, underlayRoute, vni); err != nil {
 		return err
 	}
-	log.V(1).Info("Removed nat ip route fi existed")
+	log.V(1).Info("Removed nat ip route if existed")
 
 	log.V(1).Info("Deleting dpdk nat ip if exists")
 	if err := r.deleteDPDKNATIPIfExists(ctx, nic); err != nil {
@@ -1644,7 +1645,7 @@ func (r *NetworkInterfaceReconciler) SetupWithManager(mgr ctrl.Manager, metalnet
 	ctx := ctrl.LoggerInto(context.TODO(), log)
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&metalnetv1alpha1.NetworkInterface{}).
+		For(&metalnetv1alpha1.NetworkInterface{}, builder.WithPredicates(filterByNodePredicate(r.NodeName))).
 		Watches(
 			&metalnetv1alpha1.Network{},
 			r.enqueueNetworkInterfacesReferencingNetwork(ctx, log),
@@ -1668,9 +1669,11 @@ func (r *NetworkInterfaceReconciler) enqueueNetworkInterfacesReferencingNetwork(
 			return nil
 		}
 
-		reqs := make([]ctrl.Request, len(nicList.Items))
-		for i, nic := range nicList.Items {
-			reqs[i] = ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&nic)}
+		reqs := make([]ctrl.Request, 0, len(nicList.Items))
+		for _, nic := range nicList.Items {
+			if isNetworkInterfaceAssignedToNode(&nic, r.NodeName) {
+				reqs = append(reqs, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&nic)})
+			}
 		}
 		return reqs
 	})
@@ -1688,9 +1691,11 @@ func (r *NetworkInterfaceReconciler) enqueueNetworkInterfacesReferencingLoadBala
 			return nil
 		}
 
-		reqs := make([]ctrl.Request, len(nicList.Items))
-		for i, nic := range nicList.Items {
-			reqs[i] = ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&nic)}
+		reqs := make([]ctrl.Request, 0, len(nicList.Items))
+		for _, nic := range nicList.Items {
+			if isNetworkInterfaceAssignedToNode(&nic, r.NodeName) {
+				reqs = append(reqs, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&nic)})
+			}
 		}
 		return reqs
 	})
