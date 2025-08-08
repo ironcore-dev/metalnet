@@ -96,7 +96,7 @@ func (i IP) ToUnstructured() interface{} {
 	if i.IsZero() {
 		return nil
 	}
-	return i.Addr.String()
+	return i.String()
 }
 
 func (i *IP) IsValid() bool {
@@ -176,7 +176,7 @@ func (i IPPrefix) GomegaString() string {
 }
 
 func (i IPPrefix) IP() IP {
-	return IP{i.Prefix.Addr()}
+	return IP{i.Addr()}
 }
 
 func (i *IPPrefix) UnmarshalJSON(b []byte) error {
