@@ -137,9 +137,9 @@ func (r *NetworkInterfaceReconciler) isValidIPConfiguration(ips []metalnetv1alph
 	var ipv4Count, ipv6Count int
 
 	for _, ip := range ips {
-		if ip.Addr.Is4() {
+		if ip.Is4() {
 			ipv4Count++
-		} else if ip.Addr.Is6() {
+		} else if ip.Is6() {
 			ipv6Count++
 		}
 	}

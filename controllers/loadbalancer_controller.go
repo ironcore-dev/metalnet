@@ -90,7 +90,7 @@ func (r *LoadBalancerReconciler) delete(ctx context.Context, log logr.Logger, lb
 
 	log.V(1).Info("Getting dpdk loadbalancer")
 	dpdkLoadBalancer, err := r.DPDK.GetLoadBalancer(ctx, string(lb.UID))
-	ip := lb.Spec.IP.Addr.String()
+	ip := lb.Spec.IP.String()
 	if err != nil {
 		if !dpdkerrors.IsStatusErrorCode(err, dpdkerrors.NOT_FOUND) {
 			return ctrl.Result{}, fmt.Errorf("error getting dpdk loadbalancer: %w", err)
@@ -224,7 +224,7 @@ func (r *LoadBalancerReconciler) reconcile(ctx context.Context, log logr.Logger,
 	}
 	log.V(1).Info("Ensured finalizer")
 
-	if !r.EnableIPv6Support && lb.Spec.IP.Addr.Is6() {
+	if !r.EnableIPv6Support && lb.Spec.IP.Is6() {
 		if err := r.patchStatus(ctx, lb, func() {
 			lb.Status = metalnetv1alpha1.LoadBalancerStatus{
 				State: metalnetv1alpha1.LoadBalancerStateError,
@@ -283,7 +283,7 @@ func (r *LoadBalancerReconciler) reconcile(ctx context.Context, log logr.Logger,
 
 func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr.Logger, lb *metalnetv1alpha1.LoadBalancer, vni uint32) (netip.Addr, error) {
 	log.V(1).Info("Getting dpdk loadbalancer")
-	ip := lb.Spec.IP.Addr.String()
+	ip := lb.Spec.IP.String()
 	lbalancer, err := r.DPDK.GetLoadBalancer(ctx, string(lb.UID))
 	if err != nil {
 		if !dpdkerrors.IsStatusErrorCode(err, dpdkerrors.NOT_FOUND) {

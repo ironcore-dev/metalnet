@@ -388,7 +388,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(*createdNetworkInterface.Spec.MeteringRate.PublicRate).To(Equal(publicRate))
 
 				// It should not yet be created in dpservice
-				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.UID))
 				Expect(err).To(HaveOccurred())
 				Expect(iface.Status.Code).To(Equal(uint32(dpdkerrors.NOT_FOUND)))
 			})
@@ -408,7 +408,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(fetchedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 
 				// Fetch the Iface object from dpservice
-				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.UID))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(iface.Spec.IPv4.String()).To(Equal("10.0.0.1"))
 				Expect(iface.Spec.IPv6.String()).To(Equal("fd00::1"))
@@ -467,7 +467,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 
 				// Fetch the dpservice interface object
-				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.UID))
 				Expect(err).ToNot(HaveOccurred())
 				// TODO: dpservice object is not updated during reconciliation, it will be implemented later
 				// Expect(iface.Spec.VIP.Spec.IP.String()).To(Equal("10.10.10.10"))
@@ -510,7 +510,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 
 				// Fetch the dpservice interface object
-				iface, err = dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				iface, err = dpdkClient.GetInterface(ctx, string(networkInterface.UID))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(iface.Spec.VIP).To(BeNil())
 			})
@@ -867,7 +867,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}, deletedIface)).ToNot(Succeed())
 
 				// NetworkInterface should still be in dpservice
-				_, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				_, err := dpdkClient.GetInterface(ctx, string(networkInterface.UID))
 				Expect(err).ToNot(HaveOccurred())
 
 				// Fetch the VNI object from dpservice
@@ -888,7 +888,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}, fetchedIface)).ToNot(Succeed())
 
 				// Try to fetch the deleted networkInterface object from dpservice
-				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.ObjectMeta.UID))
+				iface, err := dpdkClient.GetInterface(ctx, string(networkInterface.UID))
 				Expect(err).To(HaveOccurred())
 				Expect(iface.Status.Code).To(Equal(uint32(dpdkerrors.NOT_FOUND)))
 
@@ -943,7 +943,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(createdLB.GetFinalizers()).To(BeNil())
 
 				// LB should not yet be created in dpservice
-				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -966,7 +966,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(fetchedLB.Status.State).To(Equal(metalnetv1alpha1.LoadBalancerStateReady))
 
 				// Fetch the LB object from dpservice
-				dpdkLB, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				dpdkLB, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).ToNot(HaveOccurred())
 
 				// LB parameters in k8s and dpservice should match
@@ -1014,7 +1014,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}, deletedLB)).ToNot(Succeed())
 
 				// LB should still be in dpservice
-				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).ToNot(HaveOccurred())
 
 				// Fetch the VNI object from dpservice
@@ -1035,7 +1035,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}, fetchedLB)).ToNot(Succeed())
 
 				// Fetch the deleted LB object from dpservice
-				lb, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				lb, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).To(HaveOccurred())
 				Expect(lb.Status.Code).To(Equal(uint32(dpdkerrors.NOT_FOUND)))
 
@@ -1090,7 +1090,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(createdLB.GetFinalizers()).To(BeNil())
 
 				// LB should not yet be created in dpservice
-				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -1113,7 +1113,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(fetchedLB.Status.State).To(Equal(metalnetv1alpha1.LoadBalancerStateReady))
 
 				// Fetch the LB object from dpservice
-				dpdkLB, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				dpdkLB, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).ToNot(HaveOccurred())
 
 				// LB parameters in k8s and dpservice should match
@@ -1161,7 +1161,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}, deletedLB)).ToNot(Succeed())
 
 				// LB should still be in dpservice
-				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				_, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).ToNot(HaveOccurred())
 
 				// Fetch the VNI object from dpservice
@@ -1182,7 +1182,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}, fetchedLB)).ToNot(Succeed())
 
 				// Fetch the deleted LB object from dpservice
-				lb, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.ObjectMeta.UID))
+				lb, err := dpdkClient.GetLoadBalancer(ctx, string(loadBalancer.UID))
 				Expect(err).To(HaveOccurred())
 				Expect(lb.Status.Code).To(Equal(uint32(dpdkerrors.NOT_FOUND)))
 
@@ -1323,11 +1323,11 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).ToNot(Succeed())
 
 			// Interface should be now created in dpservice
-			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.UID))
 			Expect(err).ToNot(HaveOccurred())
 
 			// dpservice FWRule object is not created during reconciliation, because of unsupported direction string
-			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.UID))
 			Expect(err).To(HaveOccurred())
 
 			// Delete the NetworkInterface object from k8s
@@ -1364,7 +1364,7 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).ToNot(Succeed())
 
 			// Interface should Not be created in dpservice
-			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.UID))
 			Expect(err).To(HaveOccurred())
 
 			// Delete the NetworkInterface object from k8s
@@ -1400,11 +1400,11 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).ToNot(Succeed())
 
 			// Interface should be now created in dpservice
-			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.UID))
 			Expect(err).ToNot(HaveOccurred())
 
 			// dpservice FWRule object is not created during reconciliation, because of unsupported direction string
-			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.UID))
 			Expect(err).To(HaveOccurred())
 
 			// Delete the NetworkInterface object from k8s
@@ -1476,11 +1476,11 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).ToNot(Succeed())
 
 			// Interface should be now created in dpservice
-			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.UID))
 			Expect(err).ToNot(HaveOccurred())
 
 			// dpservice FWRule object is not created during reconciliation, because of port issue
-			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.UID))
 			Expect(err).To(HaveOccurred())
 
 			// Delete the NetworkInterface object from k8s
@@ -1494,7 +1494,7 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 	When("creating a NetworkInterface with wrong data", func() {
 		It("should fail", func() {
 			By("negative icmp type")
-			var protocolType metalnetv1alpha1.ProtocolType = metalnetv1alpha1.FirewallRuleProtocolTypeICMP
+			var protocolType = metalnetv1alpha1.FirewallRuleProtocolTypeICMP
 			var icmpType = int32(-5)
 			var icmpCode = int32(0)
 			wfr1.ProtocolMatch = &metalnetv1alpha1.ProtocolMatch{
@@ -1545,11 +1545,11 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).ToNot(Succeed())
 
 			// Interface should be now created in dpservice
-			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.UID))
 			Expect(err).ToNot(HaveOccurred())
 
 			// dpservice FWRule object is not created during reconciliation, because of wrong nat port
-			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err = dpdkClient.GetFirewallRule(ctx, "wfr1", string(wrongNetworkInterface.UID))
 			Expect(err).To(HaveOccurred())
 
 			// Delete the NetworkInterface object from k8s
@@ -1723,7 +1723,7 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			Expect(ifaceReconcile(ctx, *createdNetworkInterface)).To(Succeed())
 
 			// Interface should be now created in dpservice
-			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.ObjectMeta.UID))
+			_, err := dpdkClient.GetInterface(ctx, string(wrongNetworkInterface.UID))
 			Expect(err).ToNot(HaveOccurred())
 
 			// Delete the NetworkInterface object from k8s

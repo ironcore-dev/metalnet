@@ -65,6 +65,9 @@ autolabeler:
       - '/enh\/.+/'
     body:
       - '/JIRA-[0-9]{1,4}/'
+  - label: 'chore'
+    branch:
+      - '/chore\/.+/'
 template: |
   ## Changes
   $CHANGES
