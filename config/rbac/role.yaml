@@ -15,57 +15,7 @@ rules:
   - networking.metalnet.ironcore.dev
   resources:
   - loadbalancers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - networking.metalnet.ironcore.dev
-  resources:
-  - loadbalancers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - networking.metalnet.ironcore.dev
-  resources:
-  - loadbalancers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - networking.metalnet.ironcore.dev
-  resources:
   - networkinterfaces
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - networking.metalnet.ironcore.dev
-  resources:
-  - networkinterfaces/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - networking.metalnet.ironcore.dev
-  resources:
-  - networkinterfaces/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - networking.metalnet.ironcore.dev
-  resources:
   - networks
   verbs:
   - create
@@ -78,15 +28,24 @@ rules:
 - apiGroups:
   - networking.metalnet.ironcore.dev
   resources:
-  - networks/finalizers
+  - loadbalancers/finalizers
+  - networkinterfaces/finalizers
   verbs:
+  - update
+- apiGroups:
+  - networking.metalnet.ironcore.dev
+  resources:
+  - loadbalancers/status
+  - networkinterfaces/status
+  - networks/status
+  verbs:
+  - get
   - patch
   - update
 - apiGroups:
   - networking.metalnet.ironcore.dev
   resources:
-  - networks/status
+  - networks/finalizers
   verbs:
-  - get
   - patch
   - update
