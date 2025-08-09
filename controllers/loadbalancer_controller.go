@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -64,7 +65,7 @@ func (r *LoadBalancerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if nodeName := lb.Spec.NodeName; nodeName == nil || *nodeName != r.NodeName {
+	if !isLoadBalancerAssignedToNode(lb, r.NodeName) {
 		log.V(1).Info("LoadBalancer is not assigned to this node", "NodeName", lb.Spec.NodeName)
 		return ctrl.Result{}, nil
 	}
@@ -344,7 +345,7 @@ func (r *LoadBalancerReconciler) SetupWithManager(mgr ctrl.Manager, metalnetCach
 	ctx := ctrl.LoggerInto(context.TODO(), log)
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&metalnetv1alpha1.LoadBalancer{}).
+		For(&metalnetv1alpha1.LoadBalancer{}, builder.WithPredicates(filterByNodePredicate(r.NodeName))).
 		Watches(
 			&metalnetv1alpha1.Network{},
 			r.enqueueLoadBalancersReferencingNetwork(ctx, log),
@@ -364,9 +365,11 @@ func (r *LoadBalancerReconciler) enqueueLoadBalancersReferencingNetwork(ctx cont
 			return nil
 		}
 
-		reqs := make([]ctrl.Request, len(lbList.Items))
-		for i, lb := range lbList.Items {
-			reqs[i] = ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&lb)}
+		reqs := make([]ctrl.Request, 0, len(lbList.Items))
+		for _, lb := range lbList.Items {
+			if isLoadBalancerAssignedToNode(&lb, r.NodeName) {
+				reqs = append(reqs, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&lb)})
+			}
 		}
 		return reqs
 	})
