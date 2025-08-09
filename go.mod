@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/ironcore-dev/controller-utils v0.10.0
 	github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.16
-	github.com/ironcore-dev/ironcore v0.1.2
+	github.com/ironcore-dev/ironcore v0.2.3
 	github.com/ironcore-dev/metalbond v0.3.5
 	github.com/jaypipes/ghw v0.17.0
 	github.com/onsi/ginkgo/v2 v2.23.4
@@ -66,7 +66,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/spf13/cobra v1.8.1 // indirect
+	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240123184739-8d48f50f5575 // indirect
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
