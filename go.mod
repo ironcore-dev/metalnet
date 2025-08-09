@@ -13,7 +13,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.38.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.7
 	google.golang.org/grpc v1.66.0
 	k8s.io/api v0.30.3
 	k8s.io/apimachinery v0.30.3
