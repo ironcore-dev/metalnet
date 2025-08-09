@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/ironcore-dev/controller-utils/clientutils"
@@ -765,7 +766,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	}
 	if modified {
 		log.V(1).Info("Added finalizer")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Nanosecond}, nil
 	}
 	log.V(1).Info("Ensured finalizer")
 
