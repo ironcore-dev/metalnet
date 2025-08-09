@@ -1937,7 +1937,7 @@ func networkReconcile(ctx context.Context, network metalnetv1alpha1.Network) err
 			return err
 		}
 
-		if res.Requeue == false {
+		if res.RequeueAfter == 0 {
 			break
 		}
 	}
@@ -1973,7 +1973,7 @@ func ifaceReconcile(ctx context.Context, networkInterface metalnetv1alpha1.Netwo
 			return err
 		}
 
-		if res.Requeue == false {
+		if res.RequeueAfter == 0 {
 			break
 		}
 	}
@@ -2008,7 +2008,7 @@ func lbReconcile(ctx context.Context, loadBalancer metalnetv1alpha1.LoadBalancer
 			return err
 		}
 
-		if res.Requeue == false {
+		if res.RequeueAfter == 0 {
 			break
 		}
 	}
