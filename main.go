@@ -56,7 +56,7 @@ import (
 
 const dpserviceIPv6SupportVersionStr = "v0.3.1"
 
-const bluefieldSuffix = "-bluefield"
+var bluefieldSuffixes = []string{"-bluefield", "-blfd"}
 
 var (
 	scheme                      = runtime.NewScheme()
@@ -76,6 +76,15 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+func detectBluefieldSuffix(nodeName *string) bool {
+	for _, suffix := range bluefieldSuffixes {
+		if strings.Contains(*nodeName, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	var metricsAddr string
 	var secureMetrics bool
@@ -89,7 +98,7 @@ func main() {
 	var metalbondPeers []string
 	var metalbondDebug bool
 	var tapDeviceMod bool
-	var bluefieldDetected = false
+	var bluefieldDetected bool
 	var enableIPv6Support bool
 	var routerAddress net.IP
 	var publicVNI int
@@ -415,11 +424,7 @@ func main() {
 	}
 	defaultRouterAddr.RWMutex.Unlock()
 
-	if strings.Contains(nodeName, bluefieldSuffix) {
-		bluefieldDetected = true
-		// In case string "-bluefield" in the node name, remove it
-		nodeName = strings.Replace(nodeName, bluefieldSuffix, "", 1)
-	}
+	bluefieldDetected = detectBluefieldSuffix(&nodeName)
 
 	if err = (&controllers.NetworkReconciler{
 		Client:            mgr.GetClient(),
