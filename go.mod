@@ -10,7 +10,7 @@ require (
 	github.com/ironcore-dev/ironcore v0.2.3
 	github.com/ironcore-dev/metalbond v0.3.6
 	github.com/jaypipes/ghw v0.19.0
-	github.com/onsi/ginkgo/v2 v2.25.1
+	github.com/onsi/ginkgo/v2 v2.25.2
 	github.com/onsi/gomega v1.38.2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.7
