@@ -76,7 +76,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-func detectBluefieldSuffix(nodeName *string) bool {
+func detectBluefield(nodeName *string) bool {
 	for _, suffix := range bluefieldSuffixes {
 		if strings.Contains(*nodeName, suffix) {
 			return true
@@ -424,7 +424,7 @@ func main() {
 	}
 	defaultRouterAddr.RWMutex.Unlock()
 
-	bluefieldDetected = detectBluefieldSuffix(&nodeName)
+	bluefieldDetected = detectBluefield(&nodeName)
 
 	if err = (&controllers.NetworkReconciler{
 		Client:            mgr.GetClient(),
