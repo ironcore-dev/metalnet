@@ -68,8 +68,16 @@ type NextHop struct {
 	TargetNATMaxPort uint16
 }
 
+func MetalnetRouteFilter(vni metalbond.VNI, destination metalbond.Destination, nextHop metalbond.NextHop) bool {
+	// Filter out NAT routes (local ones)
+	if nextHop.Type == pb.NextHopType_NAT {
+		return false
+	}
+	return true
+}
+
 func (c *MBRouteUtil) AnnounceRoute(_ context.Context, vni VNI, destination Destination, nextHop NextHop) error {
-	return c.metalbond.AnnounceRoute(vni, metalbond.Destination{
+	return c.metalbond.AnnounceInstallRoute(vni, metalbond.Destination{
 		IPVersion: netIPAddrIPVersion(destination.Prefix.Addr()),
 		Prefix:    destination.Prefix,
 	}, metalbond.NextHop{
@@ -78,11 +86,11 @@ func (c *MBRouteUtil) AnnounceRoute(_ context.Context, vni VNI, destination Dest
 		Type:             nextHop.TargetHopType,
 		NATPortRangeFrom: nextHop.TargetNATMinPort,
 		NATPortRangeTo:   nextHop.TargetNATMaxPort,
-	})
+	}, MetalnetRouteFilter)
 }
 
 func (c *MBRouteUtil) WithdrawRoute(_ context.Context, vni VNI, destination Destination, nextHop NextHop) error {
-	return c.metalbond.WithdrawRoute(vni, metalbond.Destination{
+	return c.metalbond.WithdrawUninstallRoute(vni, metalbond.Destination{
 		IPVersion: netIPAddrIPVersion(destination.Prefix.Addr()),
 		Prefix:    destination.Prefix,
 	}, metalbond.NextHop{
@@ -91,7 +99,7 @@ func (c *MBRouteUtil) WithdrawRoute(_ context.Context, vni VNI, destination Dest
 		Type:             nextHop.TargetHopType,
 		NATPortRangeFrom: nextHop.TargetNATMinPort,
 		NATPortRangeTo:   nextHop.TargetNATMaxPort,
-	})
+	}, MetalnetRouteFilter)
 }
 
 func (c *MBRouteUtil) Subscribe(_ context.Context, vni VNI) error {
@@ -107,5 +115,5 @@ func (c *MBRouteUtil) IsSubscribed(_ context.Context, vni VNI) bool {
 }
 
 func (c *MBRouteUtil) GetRoutesForVni(_ context.Context, vni VNI) error {
-	return c.metalbond.GetRoutesForVni(vni)
+	return c.metalbond.ReAddRoutesForVni(vni)
 }
