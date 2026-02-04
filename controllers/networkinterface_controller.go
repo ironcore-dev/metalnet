@@ -300,7 +300,7 @@ func (r *NetworkInterfaceReconciler) removePrefixRouteIfExists(ctx context.Conte
 		TargetAddress: underlayRoute,
 		TargetHopType: pb.NextHopType_STANDARD,
 	}); metalbond.IgnoreNextHopNotFoundError(err) != nil {
-		return fmt.Errorf("error removing prefix route: %w", err)
+		return fmt.Errorf("error removing prefix route: %w, that is", err)
 	}
 	return nil
 }

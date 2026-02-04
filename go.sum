@@ -89,8 +89,6 @@ github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17 h1:DCF6BH7EXqQ2kSoouUB
 github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17/go.mod h1:d5x2tPmu1yqrVHac/FvL+MFOeEb3IT4gn7Bj4+Xkj8M=
 github.com/ironcore-dev/ironcore v0.2.4 h1:i/RqiMIdzaptuDR6EKSX9hbeolj7AfTuT+4v1ZC4Jeg=
 github.com/ironcore-dev/ironcore v0.2.4/go.mod h1:idYH/uyjxsIx8k3PFfXNtwfEpF9bBzBNe0aJFpIZpxs=
-github.com/ironcore-dev/metalbond v0.3.6 h1:JeK7pROqUBPO4yUsVKMa87hYG2kTn8PF0NnV9GbPYO4=
-github.com/ironcore-dev/metalbond v0.3.6/go.mod h1:YaOX+NBpe7MGukpPHHKSvVcmpsxXJpSFnyjjFsOl0AA=
 github.com/jaypipes/ghw v0.19.1 h1:Lhybk6aadgEJqIxeS0h07UOL/EgMGIdxbAy6V8J7RgY=
 github.com/jaypipes/ghw v0.19.1/go.mod h1:GPrvwbtPoxYUenr74+nAnWbardIZq600vJDD5HnPsPE=
 github.com/jaypipes/pcidb v1.1.1 h1:QmPhpsbmmnCwZmHeYAATxEaoRuiMAJusKYkUncMC0ro=
