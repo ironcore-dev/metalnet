@@ -105,6 +105,7 @@ func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Desti
 		return nil
 	}
 
+	c.log.V(1).Info("AddLocalRoute!!!!!", "VNI", vni, "dest", dest, "hop", hop)
 	if _, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
 		RouteMeta: dpdk.RouteMeta{
 			VNI: uint32(vni),
@@ -167,11 +168,12 @@ func (c *MetalnetClient) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.De
 		return nil
 	}
 
+	c.log.V(1).Info("RemoveLocalRoute!!!!!", "VNI", vni, "dest", dest, "hop", hop)
 	if _, err := c.dpdk.DeleteRoute(
 		ctx,
 		uint32(vni),
 		&dest.Prefix,
-		dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND),
+		dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND, dpdkerrors.ROUTE_BAD_PORT),
 	); err != nil {
 		return fmt.Errorf("error deleting route: %w", err)
 	}
@@ -281,7 +283,7 @@ func (c *MetalnetClient) CleanupNotPeeredRoutes(vni uint32) error {
 				ctx,
 				vni,
 				route.Spec.Prefix,
-				dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND),
+				dpdkerrors.Ignore(dpdkerrors.NO_VNI, dpdkerrors.ROUTE_NOT_FOUND, dpdkerrors.ROUTE_BAD_PORT),
 			); err != nil {
 				return fmt.Errorf("error deleting route: %w", err)
 			}
