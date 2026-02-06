@@ -95,7 +95,7 @@ func (c *MBRouteUtil) AnnounceRoute(_ context.Context, vni VNI, destination Dest
 	}
 
 	if mbClient := c.metalbond.GetClient().(*MetalnetClient); mbClient != nil {
-		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, false); err != nil {
+		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, true); err != nil {
 			return err
 		}
 	} else {
@@ -126,7 +126,7 @@ func (c *MBRouteUtil) WithdrawRoute(_ context.Context, vni VNI, destination Dest
 	}
 
 	if mbClient := c.metalbond.GetClient().(*MetalnetClient); mbClient != nil {
-		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, true); err != nil {
+		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, false); err != nil {
 			return err
 		}
 	} else {
