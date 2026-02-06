@@ -105,7 +105,7 @@ func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Desti
 		return nil
 	}
 
-	c.log.V(1).Info("AddLocalRoute!!!!!", "VNI", vni, "dest", dest, "hop", hop)
+	// c.log.V(1).Info("AddLocalRoute!!!!!", "VNI", vni, "dest", dest, "hop", hop)
 	if _, err := c.dpdk.CreateRoute(ctx, &dpdk.Route{
 		RouteMeta: dpdk.RouteMeta{
 			VNI: uint32(vni),
@@ -168,7 +168,7 @@ func (c *MetalnetClient) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.De
 		return nil
 	}
 
-	c.log.V(1).Info("RemoveLocalRoute!!!!!", "VNI", vni, "dest", dest, "hop", hop)
+	// c.log.V(1).Info("RemoveLocalRoute!!!!!", "VNI", vni, "dest", dest, "hop", hop)
 	if _, err := c.dpdk.DeleteRoute(
 		ctx,
 		uint32(vni),
@@ -177,6 +177,61 @@ func (c *MetalnetClient) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.De
 	); err != nil {
 		return fmt.Errorf("error deleting route: %w", err)
 	}
+	return nil
+}
+
+func (c *MetalnetClient) HandlePeeringRoutes(vni mb.VNI, dest mb.Destination, hop mb.NextHop, add bool) error {
+	var errStrs []string
+
+	if add {
+		if hop.Type == mbproto.NextHopType_STANDARD {
+			// the ok flag is ignored because an empty set is returned if the VNI doesn't exist, and the loop below is skipped
+			mbPeerVnis, _ := c.metalnetCache.GetPeerVnis(uint32(vni))
+			peeredPrefixes, ok := c.metalnetCache.GetPeeredPrefixes(uint32(vni))
+			c.log.V(1).Info("GetPeerVnis", "VNI", vni, "mbPeerVnis", mbPeerVnis, "peeredPrefixes", peeredPrefixes)
+
+			for _, peeredVNI := range mbPeerVnis.UnsortedList() {
+				// by default, we add the route if no peered prefixes are set
+				addRoute := true
+				if ok {
+					allowedPeeredPrefixes, exists := peeredPrefixes[peeredVNI]
+					// if we have set peered prefixes for this VNI, we need to check if the destination is in the list
+					if exists {
+						// if the destination is not in the list of peered prefixes, we don't add the route
+						addRoute = false
+						for _, peeredPrefix := range allowedPeeredPrefixes {
+							if peeredPrefix.Contains(dest.Prefix.Addr()) {
+								addRoute = true
+								break
+							}
+						}
+					}
+				}
+
+				if addRoute {
+					if err := c.addLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
+						errStrs = append(errStrs, err.Error())
+					}
+				}
+			}
+		}
+
+	} else {
+		mbPeerVnis, _ := c.metalnetCache.GetPeerVnis(uint32(vni))
+
+		for _, peeredVNI := range mbPeerVnis.UnsortedList() {
+			if hop.Type == mbproto.NextHopType_STANDARD {
+				if err := c.removeLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
+					errStrs = append(errStrs, err.Error())
+				}
+			}
+		}
+	}
+
+	if len(errStrs) > 0 {
+		return errors.New(strings.Join(errStrs, "\n"))
+	}
+
 	return nil
 }
 
@@ -195,36 +250,8 @@ func (c *MetalnetClient) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHo
 		errStrs = append(errStrs, err.Error())
 	}
 
-	if hop.Type == mbproto.NextHopType_STANDARD {
-		// the ok flag is ignored because an empty set is returned if the VNI doesn't exist, and the loop below is skipped
-		mbPeerVnis, _ := c.metalnetCache.GetPeerVnis(uint32(vni))
-		peeredPrefixes, ok := c.metalnetCache.GetPeeredPrefixes(uint32(vni))
-		c.log.V(1).Info("GetPeerVnis", "VNI", vni, "mbPeerVnis", mbPeerVnis, "peeredPrefixes", peeredPrefixes)
-
-		for _, peeredVNI := range mbPeerVnis.UnsortedList() {
-			// by default, we add the route if no peered prefixes are set
-			addRoute := true
-			if ok {
-				allowedPeeredPrefixes, exists := peeredPrefixes[peeredVNI]
-				// if we have set peered prefixes for this VNI, we need to check if the destination is in the list
-				if exists {
-					// if the destination is not in the list of peered prefixes, we don't add the route
-					addRoute = false
-					for _, peeredPrefix := range allowedPeeredPrefixes {
-						if peeredPrefix.Contains(dest.Prefix.Addr()) {
-							addRoute = true
-							break
-						}
-					}
-				}
-			}
-
-			if addRoute {
-				if err := c.addLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
-					errStrs = append(errStrs, err.Error())
-				}
-			}
-		}
+	if err := c.HandlePeeringRoutes(vni, dest, hop, true); err != nil {
+		errStrs = append(errStrs, err.Error())
 	}
 
 	if len(errStrs) > 0 {
@@ -249,14 +276,17 @@ func (c *MetalnetClient) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.Nex
 		errStrs = append(errStrs, err.Error())
 	}
 
-	mbPeerVnis, _ := c.metalnetCache.GetPeerVnis(uint32(vni))
+	// mbPeerVnis, _ := c.metalnetCache.GetPeerVnis(uint32(vni))
 
-	for _, peeredVNI := range mbPeerVnis.UnsortedList() {
-		if hop.Type == mbproto.NextHopType_STANDARD {
-			if err := c.removeLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
-				errStrs = append(errStrs, err.Error())
-			}
-		}
+	// for _, peeredVNI := range mbPeerVnis.UnsortedList() {
+	// 	if hop.Type == mbproto.NextHopType_STANDARD {
+	// 		if err := c.removeLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
+	// 			errStrs = append(errStrs, err.Error())
+	// 		}
+	// 	}
+	// }
+	if err := c.HandlePeeringRoutes(vni, dest, hop, false); err != nil {
+		errStrs = append(errStrs, err.Error())
 	}
 
 	if len(errStrs) > 0 {

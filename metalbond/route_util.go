@@ -5,6 +5,7 @@ package metalbond
 
 import (
 	"context"
+	"errors"
 	"net/netip"
 	"sync"
 
@@ -68,38 +69,75 @@ type NextHop struct {
 	TargetNATMaxPort uint16
 }
 
-func MetalnetRouteFilter(vni metalbond.VNI, destination metalbond.Destination, nextHop metalbond.NextHop) bool {
-	// Filter out NAT routes (local ones)
-	if nextHop.Type == pb.NextHopType_NAT {
-		return false
-	}
-	return true
-}
+// func MetalnetRouteFilter(vni metalbond.VNI, destination metalbond.Destination, nextHop metalbond.NextHop) bool {
+// 	// Filter out NAT routes (local ones)
+// 	if nextHop.Type == pb.NextHopType_NAT {
+// 		return false
+// 	}
+// 	return true
+// 	// return false
+// }
 
 func (c *MBRouteUtil) AnnounceRoute(_ context.Context, vni VNI, destination Destination, nextHop NextHop) error {
-	return c.metalbond.AnnounceInstallRoute(vni, metalbond.Destination{
+	var err error
+
+	metalBondDest := metalbond.Destination{
 		IPVersion: netIPAddrIPVersion(destination.Prefix.Addr()),
 		Prefix:    destination.Prefix,
-	}, metalbond.NextHop{
+	}
+
+	metalBondNextHop := metalbond.NextHop{
 		TargetAddress:    nextHop.TargetAddress,
 		TargetVNI:        uint32(nextHop.TargetVNI),
 		Type:             nextHop.TargetHopType,
 		NATPortRangeFrom: nextHop.TargetNATMinPort,
 		NATPortRangeTo:   nextHop.TargetNATMaxPort,
-	}, MetalnetRouteFilter)
+	}
+
+	if mbClient := c.metalbond.GetClient().(*MetalnetClient); mbClient != nil {
+		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, false); err != nil {
+			return err
+		}
+	} else {
+		return errors.New("could not get metalnet client from metalbond") // this should never happen
+	}
+
+	if err = c.metalbond.AnnounceRoute(vni, metalBondDest, metalBondNextHop); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *MBRouteUtil) WithdrawRoute(_ context.Context, vni VNI, destination Destination, nextHop NextHop) error {
-	return c.metalbond.WithdrawUninstallRoute(vni, metalbond.Destination{
+	var err error
+
+	metalBondDest := metalbond.Destination{
 		IPVersion: netIPAddrIPVersion(destination.Prefix.Addr()),
 		Prefix:    destination.Prefix,
-	}, metalbond.NextHop{
+	}
+
+	metalBondNextHop := metalbond.NextHop{
 		TargetAddress:    nextHop.TargetAddress,
 		TargetVNI:        uint32(nextHop.TargetVNI),
 		Type:             nextHop.TargetHopType,
 		NATPortRangeFrom: nextHop.TargetNATMinPort,
 		NATPortRangeTo:   nextHop.TargetNATMaxPort,
-	}, MetalnetRouteFilter)
+	}
+
+	if mbClient := c.metalbond.GetClient().(*MetalnetClient); mbClient != nil {
+		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, true); err != nil {
+			return err
+		}
+	} else {
+		return errors.New("could not get metalnet client from metalbond") // this should never happen
+	}
+
+	if err = c.metalbond.WithdrawRoute(vni, metalBondDest, metalBondNextHop); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *MBRouteUtil) Subscribe(_ context.Context, vni VNI) error {
