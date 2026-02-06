@@ -38,15 +38,15 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg                *rest.Config
-	k8sClient          client.Client
-	testEnv            *envtest.Environment
-	network            *networkingv1alpha1.Network
-	ctxCancel          context.CancelFunc
-	ctxGrpc            context.Context
-	dpserviceAddr      string = "127.0.0.1:1337"
-	testNode           string = "testNode"
-	testHost           string = "testhost"
+	cfg           *rest.Config
+	k8sClient     client.Client
+	testEnv       *envtest.Environment
+	network       *networkingv1alpha1.Network
+	ctxCancel     context.CancelFunc
+	ctxGrpc       context.Context
+	dpserviceAddr string = "127.0.0.1:1337"
+	testNode      string = "testNode"
+	// testHost           string = "testhost"
 	metalnetDir        string = "/tmp/var/lib/metalnet"
 	netFnsManager      *netfns.Manager
 	conn               *grpc.ClientConn
