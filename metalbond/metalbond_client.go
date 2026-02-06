@@ -49,7 +49,7 @@ func (c *MetalnetClient) SetMetalBond(mb *mb.MetalBond) {
 	c.mbInstance = mb
 }
 
-func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
+func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, hop mb.NextHop, is_peering bool) error {
 	ctx := context.TODO()
 
 	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
@@ -182,6 +182,13 @@ func (c *MetalnetClient) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.De
 
 func (c *MetalnetClient) HandlePeeringRoutes(vni mb.VNI, dest mb.Destination, hop mb.NextHop, add bool) error {
 	var errStrs []string
+	ctx := context.TODO()
+
+	// TODO: better handling / better way
+	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
+		// log.Infof("Received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
+		return nil
+	}
 
 	if add {
 		if hop.Type == mbproto.NextHopType_STANDARD {
@@ -192,6 +199,17 @@ func (c *MetalnetClient) HandlePeeringRoutes(vni mb.VNI, dest mb.Destination, ho
 
 			for _, peeredVNI := range mbPeerVnis.UnsortedList() {
 				// by default, we add the route if no peered prefixes are set
+				// I think peeredVNI should be checked first against if it is inUse in dpdk.
+				vniAvail, err := c.dpdk.GetVni(ctx, peeredVNI, 0)
+				if err != nil {
+					errStrs = append(errStrs, fmt.Sprintf("error getting vni %d from dpdk: %v", peeredVNI, err))
+					continue
+				}
+
+				if !vniAvail.Spec.InUse {
+					c.log.V(1).Info(fmt.Sprintf("Peered VNI %d is not in use in dpdk, skipping route addition", peeredVNI))
+					continue
+				}
 				addRoute := true
 				if ok {
 					allowedPeeredPrefixes, exists := peeredPrefixes[peeredVNI]
@@ -209,7 +227,7 @@ func (c *MetalnetClient) HandlePeeringRoutes(vni mb.VNI, dest mb.Destination, ho
 				}
 
 				if addRoute {
-					if err := c.addLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
+					if err := c.addLocalRoute(vni, mb.VNI(peeredVNI), dest, hop, true); err != nil {
 						errStrs = append(errStrs, err.Error())
 					}
 				}
@@ -246,7 +264,7 @@ func (c *MetalnetClient) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHo
 		return nil
 	}
 
-	if err := c.addLocalRoute(vni, vni, dest, hop); err != nil {
+	if err := c.addLocalRoute(vni, vni, dest, hop, false); err != nil {
 		errStrs = append(errStrs, err.Error())
 	}
 
