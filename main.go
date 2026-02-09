@@ -315,7 +315,6 @@ func main() {
 
 	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr,
 		metalbond.ClientOptions{
-			IPv4Only:         true,
 			PreferredNetwork: preferredNetwork,
 		})
 
