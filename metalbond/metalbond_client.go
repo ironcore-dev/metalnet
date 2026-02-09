@@ -21,7 +21,6 @@ import (
 )
 
 type ClientOptions struct {
-	IPv4Only         bool
 	PreferredNetwork *net.IPNet
 }
 
@@ -51,11 +50,6 @@ func (c *MetalnetClient) SetMetalBond(mb *mb.MetalBond) {
 
 func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
 	ctx := context.TODO()
-
-	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
-		// log.Infof("Received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
-		return fmt.Errorf("received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
-	}
 
 	if hop.Type == mbproto.NextHopType_LOADBALANCER_TARGET {
 		ip := dest.Prefix.Addr().String()
@@ -125,11 +119,6 @@ func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Desti
 
 func (c *MetalnetClient) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
 	ctx := context.TODO()
-
-	if c.config.IPv4Only && dest.IPVersion != mb.IPV4 {
-		// log.Infof("Received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
-		return fmt.Errorf("received non-IPv4 route will not be installed in kernel route table (IPv4-only mode)")
-	}
 
 	if hop.Type == mbproto.NextHopType_LOADBALANCER_TARGET {
 		ip := dest.Prefix.Addr().String()
