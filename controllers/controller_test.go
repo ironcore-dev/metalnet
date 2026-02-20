@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	dpdkerrors "github.com/ironcore-dev/dpservice/go/dpservice-go/errors"
@@ -399,6 +400,9 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 
 			It("should reconcile successfully", func() {
 				Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
+
+				// reconcile network again due to the existence of new interface
+				Expect(networkReconcile(ctx, *network)).To(Succeed())
 				// Fetch the updated Iface object from k8s
 				fetchedIface := &metalnetv1alpha1.NetworkInterface{}
 				Expect(k8sClient.Get(ctx, client.ObjectKey{
@@ -418,6 +422,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				vniAvail, err := dpdkClient.GetVni(ctx, 123, uint8(dpdk.VniType_VNI_IPV4))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vniAvail.Spec.InUse).To(BeTrue())
+
 			})
 		})
 
@@ -1193,6 +1198,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 			})
 		})
 	})
+
 })
 
 var _ = Describe("Negative cases", Label("negative"), func() {
@@ -1864,6 +1870,7 @@ var _ = Describe("Negative cases", Label("negative"), func() {
 			}, createdLB)).To(Succeed())
 			Expect(createdLB.Status.State).To(Equal(metalnetv1alpha1.LoadBalancerStateReady))
 			*/
+
 			Expect(k8sClient.Delete(ctx, wrongLoadBalancer)).To(Succeed())
 
 			Expect(lbReconcile(ctx, *wrongLoadBalancer)).To(Succeed())
