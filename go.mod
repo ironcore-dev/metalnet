@@ -9,7 +9,7 @@ require (
 	github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17
 	github.com/ironcore-dev/ironcore v0.2.4
 	github.com/ironcore-dev/metalbond v0.3.6
-	github.com/jaypipes/ghw v0.19.1
+	github.com/jaypipes/ghw v0.23.0
 	github.com/onsi/ginkgo/v2 v2.28.0
 	github.com/onsi/gomega v1.39.1
 	github.com/sirupsen/logrus v1.9.3
