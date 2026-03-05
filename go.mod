@@ -1,6 +1,6 @@
 module github.com/ironcore-dev/metalnet
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/go-logr/logr v1.4.3
@@ -15,9 +15,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.10
 	google.golang.org/grpc v1.76.0
-	k8s.io/api v0.34.1
-	k8s.io/apimachinery v0.34.1
-	k8s.io/client-go v0.34.1
+	k8s.io/api v0.35.2
+	k8s.io/apimachinery v0.35.2
+	k8s.io/client-go v0.35.2
 	sigs.k8s.io/controller-runtime v0.22.3
 )
 
