@@ -12,7 +12,7 @@ require (
 	github.com/jaypipes/ghw v0.19.1
 	github.com/onsi/ginkgo/v2 v2.28.0
 	github.com/onsi/gomega v1.39.1
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
 	google.golang.org/grpc v1.76.0
 	k8s.io/api v0.34.1
