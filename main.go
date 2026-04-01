@@ -376,11 +376,13 @@ func main() {
 		verParts := strings.Split(strings.TrimPrefix(protoVersion.Spec.ServiceVersion, "v"), "-")
 		ver, err := version.NewVersion(verParts[0])
 		if err != nil {
-			setupLog.Error(err, "unable to parse received version string", "Version", protoVersion.Spec.ServiceVersion)
-			os.Exit(1)
-		}
-		if ver.LessThan(parsedIPv6SupportVersionStr) {
-			setupLog.Error(err, "dpservice doesnt support IPv6 and metalnet ipv6 support is enabled", "Version", protoVersion.Spec.ServiceVersion)
+			setupLog.Info("unable to parse received dpservice version string, skipping IPv6 version check",
+				"Version", protoVersion.Spec.ServiceVersion,
+				"error", err)
+		} else if ver.LessThan(parsedIPv6SupportVersionStr) {
+			setupLog.Error(fmt.Errorf("dpservice version %s is older than minimum required %s for IPv6 support",
+				protoVersion.Spec.ServiceVersion, dpserviceIPv6SupportVersionStr),
+				"dpservice doesnt support IPv6 and metalnet ipv6 support is enabled")
 			os.Exit(1)
 		}
 	}
