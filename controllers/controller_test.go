@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
@@ -1951,7 +1951,7 @@ func ifaceReconcile(ctx context.Context, networkInterface metalnetv1alpha1.Netwo
 	// Create and initialize Network Interface reconciler
 	reconciler := &NetworkInterfaceReconciler{
 		Client:            k8sClient,
-		EventRecorder:     &record.FakeRecorder{},
+		EventRecorder:     events.NewFakeRecorder(10),
 		DPDK:              dpdkClient,
 		RouteUtil:         metalbondRouteUtil,
 		NodeName:          testNode,
@@ -1986,7 +1986,7 @@ func lbReconcile(ctx context.Context, loadBalancer metalnetv1alpha1.LoadBalancer
 
 	reconciler := &LoadBalancerReconciler{
 		Client:            k8sClient,
-		EventRecorder:     &record.FakeRecorder{},
+		EventRecorder:     events.NewFakeRecorder(10),
 		DPDK:              dpdkClient,
 		RouteUtil:         metalbondRouteUtil,
 		MetalnetCache:     metalnetCache,

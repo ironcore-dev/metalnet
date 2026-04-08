@@ -419,7 +419,7 @@ func main() {
 	}
 	if err = (&controllers.NetworkInterfaceReconciler{
 		Client:                      mgr.GetClient(),
-		EventRecorder:               mgr.GetEventRecorderFor("networkinterface"),
+		EventRecorder:               mgr.GetEventRecorder("networkinterface"),
 		Scheme:                      mgr.GetScheme(),
 		DPDK:                        dpdkclient.NewClient(dpdkProtoClient),
 		RouteUtil:                   metalbondRouteUtil,
@@ -441,7 +441,7 @@ func main() {
 	if err = (&controllers.LoadBalancerReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		EventRecorder:     mgr.GetEventRecorderFor("loadbalancer"),
+		EventRecorder:     mgr.GetEventRecorder("loadbalancer"),
 		DPDK:              dpdkclient.NewClient(dpdkProtoClient),
 		RouteUtil:         metalbondRouteUtil,
 		MetalnetCache:     metalnetCache,
