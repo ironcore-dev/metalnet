@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -77,7 +77,7 @@ func getNetworkInterfaceIPs(nic *metalnetv1alpha1.NetworkInterface) []netip.Addr
 // NetworkInterfaceReconciler reconciles a NetworkInterface object
 type NetworkInterfaceReconciler struct {
 	client.Client
-	record.EventRecorder
+	events.EventRecorder
 
 	Scheme *runtime.Scheme
 
@@ -779,7 +779,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 			return ctrl.Result{}, fmt.Errorf("error getting network %s: %w", networkKey, err)
 		}
 
-		r.Eventf(nic, corev1.EventTypeWarning, "NetworkNotFound", "Network %s could not be found", networkKey.Name)
+		r.Eventf(nic, nil, corev1.EventTypeWarning, "NetworkNotFound", "Reconcile", "Network %s could not be found", networkKey.Name)
 		if err := r.patchStatus(ctx, nic, func() {
 			nic.Status = metalnetv1alpha1.NetworkInterfaceStatus{
 				State: metalnetv1alpha1.NetworkInterfaceStatePending,
@@ -844,7 +844,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	if virtualIPErr != nil {
 		errs = append(errs, fmt.Errorf("error reconciling virtual ip: %w", virtualIPErr))
 		log.Error(virtualIPErr, "Error reconciling virtual ip")
-		r.Eventf(nic, corev1.EventTypeWarning, "ErrorReconcilingVirtualIP", "Error reconciling virtual ip: %v", err)
+		r.Eventf(nic, nil, corev1.EventTypeWarning, "ErrorReconcilingVirtualIP", "Reconcile", "Error reconciling virtual ip: %v", virtualIPErr)
 	} else {
 		log.V(1).Info("Reconciled virtual ip")
 	}
@@ -854,7 +854,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	if natIPErr != nil {
 		errs = append(errs, fmt.Errorf("error reconciling nat ip: %w", natIPErr))
 		log.Error(natIPErr, "Error reconciling nat ip")
-		r.Eventf(nic, corev1.EventTypeWarning, "ErrorReconcilingNATIP", "Error reconciling nat ip: %v", err)
+		r.Eventf(nic, nil, corev1.EventTypeWarning, "ErrorReconcilingNATIP", "Reconcile", "Error reconciling nat ip: %v", natIPErr)
 	} else {
 		log.V(1).Info("Reconciled nat ip")
 	}
@@ -864,7 +864,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	if lbTargetErr != nil {
 		errs = append(errs, fmt.Errorf("error reconciling lb target: %w", lbTargetErr))
 		log.Error(lbTargetErr, "Error reconciling lb targets")
-		r.Eventf(nic, corev1.EventTypeWarning, "ErrorReconcilingLBTargets", "Error reconciling lb targets: %v", err)
+		r.Eventf(nic, nil, corev1.EventTypeWarning, "ErrorReconcilingLBTargets", "Reconcile", "Error reconciling lb targets: %v", lbTargetErr)
 	} else {
 		log.V(1).Info("Reconciled prefixes")
 	}
@@ -874,7 +874,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	if prefixesErr != nil {
 		errs = append(errs, fmt.Errorf("error reconciling prefixes: %w", prefixesErr))
 		log.Error(prefixesErr, "Error reconciling prefixes")
-		r.Eventf(nic, corev1.EventTypeWarning, "ErrorReconcilingPrefixes", "Error reconciling prefixes: %v", err)
+		r.Eventf(nic, nil, corev1.EventTypeWarning, "ErrorReconcilingPrefixes", "Reconcile", "Error reconciling prefixes: %v", prefixesErr)
 	} else {
 		log.V(1).Info("Reconciled prefixes")
 	}
@@ -884,7 +884,7 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 	if fwruleErr != nil {
 		errs = append(errs, fmt.Errorf("error reconciling firewall rules: %w", fwruleErr))
 		log.Error(fwruleErr, "Error reconciling firewall rules")
-		r.Eventf(nic, corev1.EventTypeWarning, "ErrorReconcilingFirewallRules", "Error reconciling firewall rules: %v", err)
+		r.Eventf(nic, nil, corev1.EventTypeWarning, "ErrorReconcilingFirewallRules", "Reconcile", "Error reconciling firewall rules: %v", fwruleErr)
 	} else {
 		log.V(1).Info("Reconciled firewall rules")
 	}

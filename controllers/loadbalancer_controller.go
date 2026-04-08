@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -39,7 +39,7 @@ const (
 // LoadBalancerReconciler reconciles a LoadBalancer object
 type LoadBalancerReconciler struct {
 	client.Client
-	record.EventRecorder
+	events.EventRecorder
 	Scheme *runtime.Scheme
 
 	DPDK          dpdkclient.Client
@@ -245,7 +245,7 @@ func (r *LoadBalancerReconciler) reconcile(ctx context.Context, log logr.Logger,
 			return ctrl.Result{}, fmt.Errorf("error getting network %s: %w", networkKey, err)
 		}
 
-		r.Eventf(lb, corev1.EventTypeWarning, "NetworkNotFound", "Network %s could not be found", networkKey.Name)
+		r.Eventf(lb, nil, corev1.EventTypeWarning, "NetworkNotFound", "Reconcile", "Network %s could not be found", networkKey.Name)
 		if err := r.patchStatus(ctx, lb, func() {
 			lb.Status = metalnetv1alpha1.LoadBalancerStatus{
 				State: metalnetv1alpha1.LoadBalancerStatePending,
