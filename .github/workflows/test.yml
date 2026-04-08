@@ -12,6 +12,11 @@ jobs:
     name: run
     runs-on: [ self-hosted, dpdk ]
     steps:
+      - name: Pre-run cleanup
+        if: always()
+        run: |
+          for i in $(docker ps -q); do docker stop $i; done
+          for i in $(docker ps -aq); do docker rm $i; done
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
