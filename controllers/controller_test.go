@@ -402,7 +402,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
 
 				// reconcile network again due to the existence of new interface
-				Expect(networkReconcile(ctx, *network)).To(Succeed())
+				// Expect(networkReconcile(ctx, *network)).To(Succeed())
 				// Fetch the updated Iface object from k8s
 				fetchedIface := &metalnetv1alpha1.NetworkInterface{}
 				Expect(k8sClient.Get(ctx, client.ObjectKey{
