@@ -5,6 +5,7 @@ package metalbond
 
 import (
 	"context"
+	"errors"
 	"net/netip"
 	"sync"
 
@@ -69,29 +70,65 @@ type NextHop struct {
 }
 
 func (c *MBRouteUtil) AnnounceRoute(_ context.Context, vni VNI, destination Destination, nextHop NextHop) error {
-	return c.metalbond.AnnounceRoute(vni, metalbond.Destination{
+	var err error
+
+	metalBondDest := metalbond.Destination{
 		IPVersion: netIPAddrIPVersion(destination.Prefix.Addr()),
 		Prefix:    destination.Prefix,
-	}, metalbond.NextHop{
+	}
+
+	metalBondNextHop := metalbond.NextHop{
 		TargetAddress:    nextHop.TargetAddress,
 		TargetVNI:        uint32(nextHop.TargetVNI),
 		Type:             nextHop.TargetHopType,
 		NATPortRangeFrom: nextHop.TargetNATMinPort,
 		NATPortRangeTo:   nextHop.TargetNATMaxPort,
-	})
+	}
+
+	if mbClient := c.metalbond.GetClient().(*MetalnetClient); mbClient != nil {
+		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, true); err != nil {
+			return err
+		}
+	} else {
+		return errors.New("could not get metalnet client from metalbond") // this should never happen
+	}
+
+	if err = c.metalbond.AnnounceRoute(vni, metalBondDest, metalBondNextHop); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *MBRouteUtil) WithdrawRoute(_ context.Context, vni VNI, destination Destination, nextHop NextHop) error {
-	return c.metalbond.WithdrawRoute(vni, metalbond.Destination{
+	var err error
+
+	metalBondDest := metalbond.Destination{
 		IPVersion: netIPAddrIPVersion(destination.Prefix.Addr()),
 		Prefix:    destination.Prefix,
-	}, metalbond.NextHop{
+	}
+
+	metalBondNextHop := metalbond.NextHop{
 		TargetAddress:    nextHop.TargetAddress,
 		TargetVNI:        uint32(nextHop.TargetVNI),
 		Type:             nextHop.TargetHopType,
 		NATPortRangeFrom: nextHop.TargetNATMinPort,
 		NATPortRangeTo:   nextHop.TargetNATMaxPort,
-	})
+	}
+
+	if mbClient := c.metalbond.GetClient().(*MetalnetClient); mbClient != nil {
+		if err = mbClient.HandlePeeringRoutes(vni, metalBondDest, metalBondNextHop, false); err != nil {
+			return err
+		}
+	} else {
+		return errors.New("could not get metalnet client from metalbond") // this should never happen
+	}
+
+	if err = c.metalbond.WithdrawRoute(vni, metalBondDest, metalBondNextHop); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *MBRouteUtil) Subscribe(_ context.Context, vni VNI) error {
@@ -107,5 +144,5 @@ func (c *MBRouteUtil) IsSubscribed(_ context.Context, vni VNI) bool {
 }
 
 func (c *MBRouteUtil) GetRoutesForVni(_ context.Context, vni VNI) error {
-	return c.metalbond.GetRoutesForVni(vni)
+	return c.metalbond.AddRoutesForVni(vni)
 }
