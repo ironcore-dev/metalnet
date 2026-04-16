@@ -9,7 +9,7 @@ func IsAlreadySubscribedToVNIError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "Already subscribed to VNI")
+	return strings.Contains(strings.ToLower(err.Error()), "already subscribed to vni")
 }
 
 func IgnoreAlreadySubscribedToVNIError(err error) error {
@@ -23,7 +23,7 @@ func IsAlreadyUnsubscribedToVNIError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "Already unsubscribed from VNI")
+	return strings.Contains(strings.ToLower(err.Error()), "already unsubscribed from vni")
 }
 
 func IgnoreAlreadyUnsubscribedToVNIError(err error) error {
@@ -40,7 +40,7 @@ func IsNotSubscribedToVNIError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "Not subscribed to VNI")
+	return strings.Contains(strings.ToLower(err.Error()), "not subscribed to vni")
 }
 
 func IgnoreNotSubscribedToVNIError(err error) error {
@@ -54,7 +54,7 @@ func IsNextHopAlreadyExistsError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "Nexthop already exists")
+	return strings.Contains(strings.ToLower(err.Error()), "nexthop already exists")
 }
 
 func IgnoreNextHopAlreadyExistsError(err error) error {
@@ -68,21 +68,21 @@ func IsVNINotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "VNI does not exist")
+	return strings.Contains(strings.ToLower(err.Error()), "vni does not exist")
 }
 
 func IsDestinationNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "Destination does not exist")
+	return strings.Contains(strings.ToLower(err.Error()), "destination does not exist")
 }
 
 func IsNextHopNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "Nexthop does not exist")
+	return strings.Contains(strings.ToLower(err.Error()), "nexthop does not exist")
 }
 
 func IgnoreNextHopNotFoundError(err error) error {
