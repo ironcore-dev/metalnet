@@ -107,5 +107,5 @@ func (c *MBRouteUtil) IsSubscribed(_ context.Context, vni VNI) bool {
 }
 
 func (c *MBRouteUtil) GetRoutesForVni(_ context.Context, vni VNI) error {
-	return c.metalbond.GetRoutesForVni(vni)
+	return c.metalbond.AddRoutesForVni(vni)
 }
