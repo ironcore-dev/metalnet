@@ -76,7 +76,7 @@ int32
 <td>
 <code>ipFamily</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#ipfamily-v1-core">
 Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -320,7 +320,7 @@ int32
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -347,7 +347,7 @@ LoadBalancerSpec
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -373,7 +373,7 @@ LoadBalancerType
 <td>
 <code>ipFamily</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#ipfamily-v1-core">
 Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -456,7 +456,7 @@ LoadBalancerStatus
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -482,7 +482,7 @@ LoadBalancerType
 <td>
 <code>ipFamily</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#ipfamily-v1-core">
 Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -754,7 +754,7 @@ int32
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -847,7 +847,7 @@ NetworkStatus
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -875,7 +875,7 @@ NetworkInterfaceSpec
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -888,7 +888,7 @@ Kubernetes core/v1.LocalObjectReference
 <td>
 <code>ipFamilies</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#ipfamily-v1-core">
 []Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -999,6 +999,17 @@ MeteringParameters
 </td>
 <td>
 <p>MeteringRate are the metering parameters to be applied to this interface.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>hostname</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Hostname is the hostname which should be announced by the network interface.</p>
 </td>
 </tr>
 </table>
@@ -1039,7 +1050,7 @@ NetworkInterfaceStatus
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -1052,7 +1063,7 @@ Kubernetes core/v1.LocalObjectReference
 <td>
 <code>ipFamilies</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#ipfamily-v1-core">
 []Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -1163,6 +1174,17 @@ MeteringParameters
 </td>
 <td>
 <p>MeteringRate are the metering parameters to be applied to this interface.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>hostname</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Hostname is the hostname which should be announced by the network interface.</p>
 </td>
 </tr>
 </tbody>
@@ -1215,6 +1237,18 @@ MeteringParameters
 <em>
 <a href="#networking.metalnet.ironcore.dev/v1alpha1.PCIAddress">
 PCIAddress
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>tapDevice</code><br/>
+<em>
+<a href="#networking.metalnet.ironcore.dev/v1alpha1.TAPDevice">
+TAPDevice
 </a>
 </em>
 </td>
@@ -1673,6 +1707,34 @@ PortMatch
 <td><p>FirewallRuleProtocolTypeUDP is used for UDP traffic.</p>
 </td>
 </tr></tbody>
+</table>
+<h3 id="networking.metalnet.ironcore.dev/v1alpha1.TAPDevice">TAPDevice
+</h3>
+<p>
+(<em>Appears on:</em><a href="#networking.metalnet.ironcore.dev/v1alpha1.NetworkInterfaceStatus">NetworkInterfaceStatus</a>)
+</p>
+<div>
+<p>TAPDevice is a TAP device.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
 </table>
 <hr/>
 <p><em>
