@@ -76,7 +76,7 @@ int32
 <td>
 <code>ipFamily</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#ipfamily-v1-core">
 Kubernetes core/v1.IPFamily
 </a>
 </em>
