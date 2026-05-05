@@ -88,7 +88,3 @@ type NetworkList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Network `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Network{}, &NetworkList{})
-}

@@ -215,7 +215,3 @@ type NetworkInterfaceList struct {
 	// Items is a list of NetworkInterface.
 	Items []NetworkInterface `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&NetworkInterface{}, &NetworkInterfaceList{})
-}
