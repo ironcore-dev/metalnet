@@ -182,8 +182,8 @@ type MeteringParameters struct {
 	PublicRate *uint64 `json:"publicRate,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=ni
 // +kubebuilder:printcolumn:name="Status",type=string,description="Status of the network interface.",JSONPath=`.status.state`,priority=0
 // +kubebuilder:printcolumn:name="NodeName",type=string,description="Node the network interface is running on.",JSONPath=`.spec.nodeName`,priority=0
