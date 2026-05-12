@@ -64,8 +64,9 @@ type NetworkPeeringStatus struct {
 	State NetworkPeeringState `json:"state,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource
 // +kubebuilder:printcolumn:name="Handle",type=integer,description="ID of the network.",JSONPath=`.spec.id`,priority=10
 // +kubebuilder:printcolumn:name="Age",type=date,description="Age of the network.",JSONPath=`.metadata.creationTimestamp`,priority=0
 

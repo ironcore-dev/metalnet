@@ -58,8 +58,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, DeepCopyObject and ApplyConfiguration implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	"$(CONTROLLER_GEN)" applyconfiguration:headerFile="hack/boilerplate.go.txt" paths="./api/..." output:applyconfiguration:dir=./client/applyconfiguration
+	$(CONTROLLER_GEN) \
+		object:headerFile="hack/boilerplate.go.txt" \
+		applyconfiguration:headerFile="hack/boilerplate.go.txt" \
+		paths="./..."
 
 .PHONY: addlicense
 addlicense: ## Add license headers to all go files.

@@ -23,18 +23,36 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &apiv1alpha1.FirewallRuleApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("ICMPMatch"):
 		return &apiv1alpha1.ICMPMatchApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("LBPort"):
+		return &apiv1alpha1.LBPortApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("LoadBalancer"):
+		return &apiv1alpha1.LoadBalancerApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("LoadBalancerSpec"):
+		return &apiv1alpha1.LoadBalancerSpecApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("LoadBalancerStatus"):
+		return &apiv1alpha1.LoadBalancerStatusApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("MeteringParameters"):
 		return &apiv1alpha1.MeteringParametersApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("NATDetails"):
 		return &apiv1alpha1.NATDetailsApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("Network"):
+		return &apiv1alpha1.NetworkApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("NetworkInterface"):
 		return &apiv1alpha1.NetworkInterfaceApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("NetworkInterfaceSpec"):
 		return &apiv1alpha1.NetworkInterfaceSpecApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("NetworkInterfaceStatus"):
 		return &apiv1alpha1.NetworkInterfaceStatusApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("NetworkPeeringStatus"):
+		return &apiv1alpha1.NetworkPeeringStatusApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("NetworkSpec"):
+		return &apiv1alpha1.NetworkSpecApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("NetworkStatus"):
+		return &apiv1alpha1.NetworkStatusApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("PCIAddress"):
 		return &apiv1alpha1.PCIAddressApplyConfiguration{}
+	case v1alpha1.SchemeGroupVersion.WithKind("PeeredPrefix"):
+		return &apiv1alpha1.PeeredPrefixApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("PortMatch"):
 		return &apiv1alpha1.PortMatchApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("ProtocolMatch"):
