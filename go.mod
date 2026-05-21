@@ -9,11 +9,11 @@ require (
 	github.com/ironcore-dev/ironcore v0.3.1-0.20260512064631-3efeaee6c3b0
 	github.com/ironcore-dev/metalbond v0.4.2
 	github.com/jaypipes/ghw v0.24.0
-	github.com/onsi/ginkgo/v2 v2.28.3
-	github.com/onsi/gomega v1.40.0
+	github.com/onsi/ginkgo/v2 v2.29.0
+	github.com/onsi/gomega v1.41.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.81.1
 	k8s.io/api v0.35.3
 	k8s.io/apimachinery v0.35.3
 	k8s.io/client-go v0.35.3
