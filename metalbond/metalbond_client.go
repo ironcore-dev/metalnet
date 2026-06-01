@@ -245,6 +245,12 @@ func (c *MetalnetClient) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHo
 		return nil
 	}
 
+	// if the route is not default route from public VNI, we do not need to add it
+	// because public VNI does not present on dpservice
+	if uint32(vni) == c.DefaultRouterAddress.PublicVNI {
+		return nil
+	}
+
 	if err := c.addLocalRoute(vni, vni, dest, hop, false); err != nil {
 		errStrs = append(errStrs, err.Error())
 	}
@@ -268,6 +274,12 @@ func (c *MetalnetClient) RemoveRoute(vni mb.VNI, dest mb.Destination, hop mb.Nex
 	if err != nil {
 		return fmt.Errorf("error handling default router change: %w", err)
 	} else if isDefaultRoute {
+		return nil
+	}
+
+	// if the route is not default route from public VNI, we do not need to remove it
+	// because public VNI does not present on dpservice
+	if uint32(vni) == c.DefaultRouterAddress.PublicVNI {
 		return nil
 	}
 
@@ -318,9 +330,9 @@ func (c *MetalnetClient) SetDefaultRouterAddress(address netip.Addr) {
 	c.DefaultRouterAddress.SetBySubsciption = true
 }
 
-func (c *MetalnetClient) handleDefaultRouterChange(operation DefaultRouteOperation) error {
+func (c *MetalnetClient) handleDefaultRouterChange(operation DefaultRouteOperation, prefix string) error {
 
-	defaultRoutePrefix := netip.MustParsePrefix("0.0.0.0/0")
+	defaultRoutePrefix := netip.MustParsePrefix(prefix)
 	ctx := context.TODO()
 
 	existingVNIs := c.mbInstance.GetSubscribedVnis()
@@ -371,22 +383,24 @@ func (c *MetalnetClient) FilterDefaultRoute(operation DefaultRouteOperation, vni
 		return false, nil
 	}
 
-	if dest.Prefix.String() != "0.0.0.0/0" {
-		return false, nil
+	prefix := dest.Prefix.String()
+	if prefix == "0.0.0.0/0" || prefix == "::/0" {
+		// handle default router change by setting the default router address and adding/removing default routes for all existing VNIs
+		c.DefaultRouterAddress.RWMutex.Lock()
+		defer c.DefaultRouterAddress.RWMutex.Unlock()
+
+		if operation == AddDefaultRoute {
+			c.SetDefaultRouterAddress(hop.TargetAddress)
+		} else {
+			c.SetDefaultRouterAddress(netip.Addr{})
+		}
+
+		if err := c.handleDefaultRouterChange(operation, prefix); err != nil {
+			return true, fmt.Errorf("error handling default router change: %w, operation %d", err, operation)
+		}
+
+		return true, nil
 	}
 
-	c.DefaultRouterAddress.RWMutex.Lock()
-	defer c.DefaultRouterAddress.RWMutex.Unlock()
-
-	if operation == AddDefaultRoute {
-		c.SetDefaultRouterAddress(hop.TargetAddress)
-	} else {
-		c.SetDefaultRouterAddress(netip.Addr{})
-	}
-
-	if err := c.handleDefaultRouterChange(operation); err != nil {
-		return true, fmt.Errorf("error handling default router change: %w, operation %d", err, operation)
-	}
-
-	return true, nil
+	return false, nil
 }
