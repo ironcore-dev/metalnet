@@ -4,16 +4,16 @@ go 1.26.0
 
 require (
 	github.com/go-logr/logr v1.4.3
-	github.com/ironcore-dev/controller-utils v0.11.1-0.20260416072254-416d8be454e4
+	github.com/ironcore-dev/controller-utils v0.12.0
 	github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17
-	github.com/ironcore-dev/ironcore v0.3.1-0.20260512064631-3efeaee6c3b0
+	github.com/ironcore-dev/ironcore v0.4.1
 	github.com/ironcore-dev/metalbond v0.4.2
 	github.com/jaypipes/ghw v0.24.0
-	github.com/onsi/ginkgo/v2 v2.28.3
-	github.com/onsi/gomega v1.40.0
+	github.com/onsi/ginkgo/v2 v2.29.0
+	github.com/onsi/gomega v1.41.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.81.1
 	k8s.io/api v0.35.3
 	k8s.io/apimachinery v0.35.3
 	k8s.io/client-go v0.35.3
@@ -96,8 +96,8 @@ require (
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/term v0.42.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
