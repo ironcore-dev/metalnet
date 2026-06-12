@@ -7,9 +7,9 @@ require (
 	github.com/ironcore-dev/controller-utils v0.12.0
 	github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17
 	github.com/ironcore-dev/ironcore v0.4.1
-	github.com/ironcore-dev/metalbond v0.4.2
+	github.com/ironcore-dev/metalbond v0.4.3
 	github.com/jaypipes/ghw v0.24.0
-	github.com/onsi/ginkgo/v2 v2.29.0
+	github.com/onsi/ginkgo/v2 v2.30.0
 	github.com/onsi/gomega v1.41.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
