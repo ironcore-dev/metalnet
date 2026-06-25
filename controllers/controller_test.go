@@ -706,6 +706,48 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				Expect(updatedIface.Spec.Prefixes).To(BeEmpty())
 				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 			})
+			It("Prefixes should handle simultaneous additions and deletions", func() {
+				By("setting up initial prefixes")
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.0.0.0/24"),
+					metalnetv1alpha1.MustParseIPPrefix("10.1.0.0/24"),
+				}
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+				Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("removing one prefix and adding a new one simultaneously")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.Prefixes = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.1.0.0/24"), // keep
+					metalnetv1alpha1.MustParseIPPrefix("10.2.0.0/24"), // add
+					// 10.0.0.0/24 implicitly removed
+				}
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+				Expect(ifaceReconcile(ctx, *updatedIface)).To(Succeed())
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				// Verify DPDK state matches spec exactly — 10.0.0.0/24 gone, 10.2.0.0/24 present
+				prefixList, err := dpdkClient.ListPrefixes(ctx, string(updatedIface.UID))
+				Expect(err).NotTo(HaveOccurred())
+				var activePrefixes []string
+				for _, p := range prefixList.Items {
+					activePrefixes = append(activePrefixes, p.Spec.Prefix.String())
+				}
+				Expect(activePrefixes).To(ConsistOf("10.1.0.0/24", "10.2.0.0/24"))
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
 
 			It("LoadBalancerTargets should add/update/delete successfully", func() {
 				By("adding the LoadBalancerTarget")
@@ -763,6 +805,45 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				}, updatedIface)).To(Succeed())
 
 				Expect(updatedIface.Spec.LoadBalancerTargets).To(BeEmpty())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+			})
+
+			It("LoadBalancerTargets should handle simultaneous additions and deletions", func() {
+				By("setting up initial LB targets")
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.LoadBalancerTargets = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.0.0.1/32"),
+				}
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+				Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("removing one LB target and adding a new one simultaneously")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.LoadBalancerTargets = []metalnetv1alpha1.IPPrefix{
+					metalnetv1alpha1.MustParseIPPrefix("10.1.0.1/32"), // 10.1.0.0 replaces 10.0.0.1
+				}
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+				Expect(ifaceReconcile(ctx, *updatedIface)).To(Succeed())
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				lbPrefixList, err := dpdkClient.ListLoadBalancerPrefixes(ctx, string(updatedIface.UID))
+				Expect(err).NotTo(HaveOccurred())
+				var activePrefixes []string
+				for _, p := range lbPrefixList.Items {
+					activePrefixes = append(activePrefixes, p.Spec.Prefix.String())
+				}
+				Expect(activePrefixes).To(ConsistOf("10.1.0.1/32"))
 				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 			})
 
@@ -856,6 +937,103 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				fw1, err = dpdkClient.GetFirewallRule(ctx, string(updatedIface.UID), string(fr1.FirewallRuleID))
 				Expect(err).To(HaveOccurred())
 				Expect(fw1.Status.Code).To(Equal(uint32(dpdkerrors.NOT_FOUND)))
+			})
+
+			It("FirewallRules should handle simultaneous additions and deletions", func() {
+				By("setting up initial firewall rules")
+				var protocolType metalnetv1alpha1.ProtocolType = "TCP"
+				var srcPort int32 = 80
+				var dstPort int32 = -1
+				fr1 := metalnetv1alpha1.FirewallRule{
+					FirewallRuleID:    "fr1",
+					Direction:         metalnetv1alpha1.FirewallRuleDirectionIngress,
+					Action:            metalnetv1alpha1.FirewallRuleActionAccept,
+					IpFamily:          "IPv4",
+					SourcePrefix:      metalnetv1alpha1.MustParseNewIPPrefix("0.0.0.0/0"),
+					DestinationPrefix: metalnetv1alpha1.MustParseNewIPPrefix("10.0.0.1/32"),
+					ProtocolMatch: &metalnetv1alpha1.ProtocolMatch{
+						ProtocolType: &protocolType,
+						PortRange: &metalnetv1alpha1.PortMatch{
+							SrcPort:    &srcPort,
+							EndSrcPort: 80,
+							DstPort:    &dstPort,
+						},
+					},
+				}
+				fr2 := metalnetv1alpha1.FirewallRule{
+					FirewallRuleID:    "fr2",
+					Direction:         metalnetv1alpha1.FirewallRuleDirectionIngress,
+					Action:            metalnetv1alpha1.FirewallRuleActionAccept,
+					IpFamily:          "IPv4",
+					SourcePrefix:      metalnetv1alpha1.MustParseNewIPPrefix("0.0.0.0/0"),
+					DestinationPrefix: metalnetv1alpha1.MustParseNewIPPrefix("10.0.0.2/32"),
+					ProtocolMatch: &metalnetv1alpha1.ProtocolMatch{
+						ProtocolType: &protocolType,
+						PortRange: &metalnetv1alpha1.PortMatch{
+							SrcPort:    &srcPort,
+							EndSrcPort: 80,
+							DstPort:    &dstPort,
+						},
+					},
+				}
+				fr3 := metalnetv1alpha1.FirewallRule{
+					FirewallRuleID:    "fr3",
+					Direction:         metalnetv1alpha1.FirewallRuleDirectionIngress,
+					Action:            metalnetv1alpha1.FirewallRuleActionAccept,
+					IpFamily:          "IPv4",
+					SourcePrefix:      metalnetv1alpha1.MustParseNewIPPrefix("0.0.0.0/0"),
+					DestinationPrefix: metalnetv1alpha1.MustParseNewIPPrefix("10.0.0.3/32"),
+					ProtocolMatch: &metalnetv1alpha1.ProtocolMatch{
+						ProtocolType: &protocolType,
+						PortRange: &metalnetv1alpha1.PortMatch{
+							SrcPort:    &srcPort,
+							EndSrcPort: 80,
+							DstPort:    &dstPort,
+						},
+					},
+				}
+
+				patchIface := networkInterface.DeepCopy()
+				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{fr1, fr2}
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(networkInterface))).To(Succeed())
+				Expect(ifaceReconcile(ctx, *networkInterface)).To(Succeed())
+
+				updatedIface := &metalnetv1alpha1.NetworkInterface{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
+
+				By("removing one firewall rule and adding a new one simultaneously")
+				patchIface = updatedIface.DeepCopy()
+				patchIface.Spec.FirewallRules = []metalnetv1alpha1.FirewallRule{
+					fr2, // keep
+					fr3, // add
+					// fr1 implicitly removed
+				}
+				Expect(k8sClient.Patch(ctx, patchIface, client.MergeFrom(updatedIface))).To(Succeed())
+				Expect(ifaceReconcile(ctx, *updatedIface)).To(Succeed())
+
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      networkInterface.Name,
+					Namespace: networkInterface.Namespace,
+				}, updatedIface)).To(Succeed())
+
+				// fr1 must be gone, fr2 kept, fr3 added
+				fw1, err := dpdkClient.GetFirewallRule(ctx, string(updatedIface.UID), string(fr1.FirewallRuleID))
+				Expect(err).To(HaveOccurred())
+				Expect(fw1.Status.Code).To(Equal(uint32(dpdkerrors.NOT_FOUND)))
+
+				fw2, err := dpdkClient.GetFirewallRule(ctx, string(updatedIface.UID), string(fr2.FirewallRuleID))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fw2.Spec.DestinationPrefix.String()).To(Equal("10.0.0.2/32"))
+
+				fw3, err := dpdkClient.GetFirewallRule(ctx, string(updatedIface.UID), string(fr3.FirewallRuleID))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fw3.Spec.DestinationPrefix.String()).To(Equal("10.0.0.3/32"))
+
+				Expect(updatedIface.Status.State).To(Equal(metalnetv1alpha1.NetworkInterfaceStateReady))
 			})
 		})
 
