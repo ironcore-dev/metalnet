@@ -1922,6 +1922,7 @@ func networkReconcile(ctx context.Context, network metalnetv1alpha1.Network) err
 
 	reconciler := &NetworkReconciler{
 		Client:            k8sClient,
+		APIReader:         k8sClient,
 		DPDK:              dpdkClient,
 		RouteUtil:         metalbondRouteUtil,
 		MetalnetCache:     metalnetCache,
@@ -1958,6 +1959,7 @@ func ifaceReconcile(ctx context.Context, networkInterface metalnetv1alpha1.Netwo
 	// Create and initialize Network Interface reconciler
 	reconciler := &NetworkInterfaceReconciler{
 		Client:            k8sClient,
+		APIReader:         k8sClient,
 		EventRecorder:     events.NewFakeRecorder(10),
 		DPDK:              dpdkClient,
 		RouteUtil:         metalbondRouteUtil,
@@ -1993,6 +1995,7 @@ func lbReconcile(ctx context.Context, loadBalancer metalnetv1alpha1.LoadBalancer
 
 	reconciler := &LoadBalancerReconciler{
 		Client:            k8sClient,
+		APIReader:         k8sClient,
 		EventRecorder:     events.NewFakeRecorder(10),
 		DPDK:              dpdkClient,
 		RouteUtil:         metalbondRouteUtil,
