@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/jaypipes/ghw"
@@ -102,6 +103,7 @@ func main() {
 	var metalnetDir string
 	var preferNetwork string
 	var multiportEswitchMode bool
+	var dpserviceLock string
 	var initAvailable []ghw.PCIAddress
 	var defaultRouterAddr metalbond.DefaultRouterAddress
 	var tlsOpts []func(*tls.Config)
@@ -132,6 +134,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&metalnetDir, "metalnet-dir", "/var/lib/metalnet", "Directory to store metalnet data at.")
 	flag.StringVar(&preferNetwork, "prefer-network", "", "Prefer network routes (e.g. 2001:db8::1/52)")
+	flag.StringVar(&dpserviceLock, "dpservice-lock", "", "Path to the dpservice active lock file. When set, metalnet watches it and exits once dpservice releases the lock (i.e. terminates). Leave empty to disable.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -155,6 +158,46 @@ func main() {
 		multiportEswitchMode = strings.TrimSpace(string(content)) == "eswitch"
 	}
 	setupLog.Info(fmt.Sprintf("Multiport Eswitch mode set to: %v", multiportEswitchMode))
+
+	// Optionally couple metalnet's lifecycle to dpservice via the shared active
+	// lock file (dpservice's --active-lockfile). dpservice holds an exclusive
+	// flock on this file while running and releases it on termination. metalnet
+	// blocks on the same lock; acquiring it means dpservice has terminated, so
+	// metalnet exits(1) to let Kubernetes restart it and rebuild the dataplane.
+	// When --dpservice-lock is empty the watcher is disabled.
+	if dpserviceLock == "" {
+		setupLog.Info("dpservice-lock not set, skipping dpservice termination watcher")
+	} else {
+		// Wait up to 60s for the lock file to appear, checking every 1s. This
+		// tolerates dpservice starting slightly after metalnet.
+		waitTimeout := 60 * time.Second
+		checkInterval := 1 * time.Second
+		startTime := time.Now()
+		for {
+			_, statErr := os.Stat(dpserviceLock)
+			if statErr == nil {
+				break
+			}
+			if !os.IsNotExist(statErr) {
+				setupLog.Error(statErr, "error checking dpservice lock file")
+				os.Exit(1)
+			}
+			if time.Since(startTime) > waitTimeout {
+				setupLog.Error(statErr, "timeout waiting for dpservice lock file")
+				os.Exit(1)
+			}
+			time.Sleep(checkInterval)
+		}
+
+		go func() {
+			if err := waitForDpserviceLock(dpserviceLock); err != nil {
+				setupLog.Error(err, "error while waiting for dpservice lock")
+				os.Exit(1)
+			}
+			setupLog.Info("detected dpservice termination, exiting with code 1")
+			os.Exit(1)
+		}()
+	}
 
 	defaultRouterAddr.PublicVNI = uint32(publicVNI)
 	defaultRouterAddr.SetBySubsciption = false
@@ -478,4 +521,26 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// waitForDpserviceLock blocks until the specified lock file can be acquired,
+// indicating that the dpservice holding it has terminated.
+func waitForDpserviceLock(lockFilePath string) error {
+	file, err := os.OpenFile(lockFilePath, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		return fmt.Errorf("error opening lock file: %w", err)
+	}
+	defer file.Close()
+
+	// Blocking exclusive lock. This returns only once dpservice releases its
+	// own exclusive lock on the file, i.e. when dpservice terminates.
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("error acquiring lock: %w", err)
+	}
+
+	// Release the lock before returning so we do not hold it against any other
+	// waiter (e.g. a standby dpservice).
+	_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+
+	return nil
 }
