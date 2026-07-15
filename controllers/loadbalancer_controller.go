@@ -40,7 +40,8 @@ const (
 type LoadBalancerReconciler struct {
 	client.Client
 	events.EventRecorder
-	Scheme *runtime.Scheme
+	APIReader client.Reader
+	Scheme    *runtime.Scheme
 
 	DPDK          dpdkclient.Client
 	MetalnetCache *internal.MetalnetCache
@@ -61,7 +62,7 @@ func (r *LoadBalancerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	lb := &metalnetv1alpha1.LoadBalancer{}
 
-	if err := r.Get(ctx, req.NamespacedName, lb); err != nil {
+	if err := r.APIReader.Get(ctx, req.NamespacedName, lb); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 

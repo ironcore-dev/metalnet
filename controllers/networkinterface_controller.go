@@ -79,7 +79,8 @@ type NetworkInterfaceReconciler struct {
 	client.Client
 	events.EventRecorder
 
-	Scheme *runtime.Scheme
+	APIReader client.Reader
+	Scheme    *runtime.Scheme
 
 	DPDK      dpdkclient.Client
 	RouteUtil metalbond.RouteUtil
@@ -111,7 +112,7 @@ func (r *NetworkInterfaceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	nic := &metalnetv1alpha1.NetworkInterface{}
 
-	if err := r.Get(ctx, req.NamespacedName, nic); err != nil {
+	if err := r.APIReader.Get(ctx, req.NamespacedName, nic); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
