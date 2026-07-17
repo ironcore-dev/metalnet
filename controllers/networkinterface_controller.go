@@ -1106,11 +1106,17 @@ func (r *NetworkInterfaceReconciler) reconcileLBTargets(ctx context.Context, log
 					return err
 				}
 				log.V(1).Info("Ensuring metalbond lb target route exists")
-				if err := r.removeLBTargetRouteIfExists(ctx, vni, prefix, underlayRoute); err != nil {
-					return err
+
+				dest := metalbond.Destination{
+					Prefix: prefix,
 				}
-				if err := r.addLBTargetRouteIfNotExists(ctx, vni, prefix, underlayRoute); err != nil {
-					return err
+				underlayRouteAnnounced := r.RouteUtil.IsRouteAnnounced(ctx, metalbond.VNI(vni), dest, underlayRoute, pb.NextHopType_LOADBALANCER_TARGET, 0, 0)
+				if !underlayRouteAnnounced {
+					if err := r.addLBTargetRouteIfNotExists(ctx, vni, prefix, underlayRoute); err != nil {
+						return err
+					}
+				} else {
+					log.V(1).Info("Metalbond route already announced")
 				}
 				log.V(1).Info("Ensured metalbond lb target route exists")
 				return nil
