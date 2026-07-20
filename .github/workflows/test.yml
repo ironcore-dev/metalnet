@@ -21,11 +21,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - name: Download metalbond using the script
-        run: ./hack/rel_download.sh -dir=build -owner=ironcore-dev -repo=metalbond -pat=${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
 
       - name: Install metalbond
-        run: sudo dpkg -i build/metalbond*.deb
+        run: go install github.com/ironcore-dev/metalbond/cmd/metalbond@main
 
       - name: Start metalbond
         run: metalbond server --listen [::1]:4711 --http [::1]:4712 --keepalive 3 &
@@ -36,9 +37,6 @@ jobs:
       - name: Run wait for tcp port
         run: timeout 10 bash -c 'until echo > /dev/tcp/localhost/1337 2>/dev/null; do sleep 1; done' 2>/dev/null
 
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
       - run: make test
       - name: Delete git global config
         if: always()
