@@ -1,3 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 resources:
 - monitor.yaml
 
@@ -6,6 +9,6 @@ resources:
 # Additionally, ensure that you uncomment the [METRICS-WITH-CERTS] patch under config/default/kustomization.yaml
 # to mount the "metrics-server-cert" secret in the Manager Deployment.
 patches:
-  - path: monitor_tls_patch.yaml
-    target:
-      kind: ServiceMonitor
+- path: monitor_tls_patch.yaml
+  target:
+    kind: ServiceMonitor
