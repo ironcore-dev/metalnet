@@ -336,6 +336,13 @@ func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr
 		return netip.Addr{}, err
 	}
 	log.V(1).Info("Added loadbalancer route if not existed")
+
+	// Since it can not be ensured that we have not missed loadbalancer targets we ask for vni routes
+	log.V(1).Info("Get routes and add possibly missing route at the first place", "vni", vni)
+	if err := r.RouteUtil.GetRoutesForVni(ctx, metalbond.VNI(vni)); err != nil {
+		return netip.Addr{}, err
+	}
+
 	return *lbalancer.Spec.UnderlayRoute, nil
 }
 

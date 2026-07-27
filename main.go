@@ -322,15 +322,6 @@ func main() {
 	mbInstance := mb.NewMetalBond(config, metalnetMBClient)
 	metalbondRouteUtil := metalbond.NewMBRouteUtil(mbInstance)
 
-	for _, metalbondPeer := range metalbondPeers {
-		if err := mbInstance.AddPeer(metalbondPeer, ""); err != nil {
-			setupLog.Error(err, "failed to add metalbond peer", "MetalbondPeer", metalbondPeer)
-			os.Exit(1)
-		}
-	}
-
-	metalnetMBClient.SetMetalBond(mbInstance)
-
 	dpdkUUID, err := dpdkProtoClient.CheckInitialized(context.Background(), &dpdkproto.CheckInitializedRequest{})
 	if err != nil {
 		_, err = dpdkProtoClient.Initialize(context.Background(), &dpdkproto.InitializeRequest{})
@@ -362,6 +353,15 @@ func main() {
 		"metalnetName", protoVersion.ClientName,
 		"metalnetProtocol", protoVersion.ClientProtocol,
 		"metalnetVersion", protoVersion.ClientVersion)
+
+	for _, metalbondPeer := range metalbondPeers {
+		if err := mbInstance.AddPeer(metalbondPeer, ""); err != nil {
+			setupLog.Error(err, "failed to add metalbond peer", "MetalbondPeer", metalbondPeer)
+			os.Exit(1)
+		}
+	}
+
+	metalnetMBClient.SetMetalBond(mbInstance)
 
 	if err := metalnetclient.SetupNetworkInterfaceNetworkRefNameFieldIndexer(context.TODO(), mgr.GetFieldIndexer()); err != nil {
 		setupLog.Error(err, "unable to set up field indexer", "Field", metalnetclient.NetworkInterfaceNetworkRefNameField)
