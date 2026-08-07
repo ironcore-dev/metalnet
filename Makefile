@@ -165,7 +165,7 @@ KUSTOMIZE_VERSION ?= v5.7.1
 CONTROLLER_TOOLS_VERSION ?= v0.20.1
 GOLANGCILINT_VERSION ?= v2.12
 ADDLICENSE_VERSION ?= v1.1.1
-ENVTEST_VERSION ?= 0.23
+ENVTEST_VERSION ?= 0.24
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
