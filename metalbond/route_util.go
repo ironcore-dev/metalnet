@@ -34,6 +34,7 @@ type RouteUtil interface {
 	Unsubscribe(ctx context.Context, vni VNI) error
 	IsSubscribed(ctx context.Context, vni VNI) bool
 	GetRoutesForVni(ctx context.Context, vni VNI) error
+	IsRouteAnnounced(ctx context.Context, vni VNI, destination Destination, nextHop NextHop) bool
 }
 
 type MBRouteUtil struct {
@@ -145,4 +146,21 @@ func (c *MBRouteUtil) IsSubscribed(_ context.Context, vni VNI) bool {
 
 func (c *MBRouteUtil) GetRoutesForVni(_ context.Context, vni VNI) error {
 	return c.metalbond.AddRoutesForVni(vni)
+}
+
+func (c *MBRouteUtil) IsRouteAnnounced(_ context.Context, vni VNI, destination Destination, nextHop NextHop) bool {
+	mbDest := metalbond.Destination{
+		IPVersion: netIPAddrIPVersion(destination.Prefix.Addr()),
+		Prefix:    destination.Prefix,
+	}
+
+	mbNextHop := metalbond.NextHop{
+		TargetAddress:    nextHop.TargetAddress,
+		TargetVNI:        uint32(nextHop.TargetVNI),
+		Type:             nextHop.TargetHopType,
+		NATPortRangeFrom: nextHop.TargetNATMinPort,
+		NATPortRangeTo:   nextHop.TargetNATMaxPort,
+	}
+
+	return c.metalbond.IsRouteAnnounced(vni, mbDest, mbNextHop)
 }
