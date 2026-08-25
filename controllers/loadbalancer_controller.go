@@ -342,7 +342,6 @@ func (r *LoadBalancerReconciler) applyLoadBalancer(ctx context.Context, log logr
 	if err := r.RouteUtil.GetRoutesForVni(ctx, metalbond.VNI(vni)); err != nil {
 		return netip.Addr{}, err
 	}
-	
 	return *lbalancer.Spec.UnderlayRoute, nil
 }
 
