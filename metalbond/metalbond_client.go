@@ -21,7 +21,27 @@ import (
 )
 
 type ClientOptions struct {
-	PreferredNetwork *net.IPNet
+	PreferredNetwork    *net.IPNet
+	RouteDriftDetection bool
+}
+
+// Object labels used in route-drift log entries.
+const (
+	driftObjectLBTarget    = "lb_target"
+	driftObjectNeighborNat = "neighbor_nat"
+)
+
+// driftObjectName maps a metalbond next-hop type to the stable object label
+// used in route-drift log entries.
+func driftObjectName(t mbproto.NextHopType) string {
+	switch t {
+	case mbproto.NextHopType_LOADBALANCER_TARGET:
+		return driftObjectLBTarget
+	case mbproto.NextHopType_NAT:
+		return driftObjectNeighborNat
+	default:
+		return t.String()
+	}
 }
 
 type MetalnetClient struct {
@@ -78,6 +98,17 @@ func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Desti
 		); err != nil {
 			return fmt.Errorf("error creating lb target: %w", err)
 		}
+
+		if c.config.RouteDriftDetection {
+			if err := c.detectLBTargetRouteDrift(ctx, string(uid), vni, dest); err != nil {
+				c.log.Error(err, "route drift detected",
+					"object", driftObjectName(hop.Type),
+					"vni", vni,
+					"lb", uid,
+					"dest", dest.String(),
+				)
+			}
+		}
 		return nil
 	}
 
@@ -96,6 +127,16 @@ func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Desti
 		}, dpdkerrors.Ignore(dpdkerrors.ALREADY_EXISTS),
 		); err != nil {
 			return fmt.Errorf("error nat route: %w", err)
+		}
+
+		if c.config.RouteDriftDetection {
+			if err := c.detectNeighbouringNATRouteDrift(ctx, natIP, vni, dest); err != nil {
+				c.log.Error(err, "route drift detected",
+					"object", driftObjectName(hop.Type),
+					"vni", vni,
+					"natIP", natIP.String(),
+				)
+			}
 		}
 		return nil
 	}
@@ -404,4 +445,130 @@ func (c *MetalnetClient) FilterDefaultRoute(operation DefaultRouteOperation, vni
 	}
 
 	return false, nil
+}
+
+// detectLBTargetRouteDrift reports (as an error) any divergence between
+// dpservice LB targets under uid and metalbond's expected hops for (vni, dest).
+// Read-only. Bidirectional:
+//   - unexpected: dpservice has targets metalbond does not know
+//   - missing:    metalbond has hops that dpservice is missing
+//
+// If metalbond has no hops for (vni, dest), the unexpected check is skipped
+// (partial-replay grace); direction 2 is vacuous.
+func (c *MetalnetClient) detectLBTargetRouteDrift(
+	ctx context.Context, uid string, vni mb.VNI, dest mb.Destination,
+) error {
+	targets, err := c.dpdk.ListLoadBalancerTargets(ctx, uid,
+		dpdkerrors.Ignore(dpdkerrors.NO_LB))
+	if err != nil {
+		return fmt.Errorf("list lb targets: %w", err)
+	}
+	hops := c.mbInstance.GetNextHopByVniAndDestination(vni, dest)
+
+	// Direction 1: unexpected in dpservice
+	var driftErrs []error
+	if len(hops) == 0 {
+		c.log.V(1).Info("skipping LB target 'unexpected' check: no hops known",
+			"vni", vni, "dest", dest, "lb", uid)
+	} else {
+		for _, t := range targets.Items {
+			match := false
+			for _, h := range hops {
+				if h.Type == mbproto.NextHopType_LOADBALANCER_TARGET &&
+					t.Spec.TargetIP.String() == h.TargetAddress.String() {
+					match = true
+					break
+				}
+			}
+			if !match {
+				driftErrs = append(driftErrs, fmt.Errorf(
+					"unexpected lb target in dpservice: lb=%s vni=%d dest=%s target=%s",
+					uid, vni, dest, t.Spec.TargetIP))
+			}
+		}
+	}
+
+	// Direction 2: missing from dpservice
+	for _, h := range hops {
+		if h.Type != mbproto.NextHopType_LOADBALANCER_TARGET {
+			continue
+		}
+		matched := false
+		for _, t := range targets.Items {
+			if t.Spec.TargetIP.String() == h.TargetAddress.String() {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			driftErrs = append(driftErrs, fmt.Errorf(
+				"missing lb target in dpservice: lb=%s vni=%d dest=%s target=%s",
+				uid, vni, dest, h.TargetAddress))
+		}
+	}
+
+	return errors.Join(driftErrs...)
+}
+
+// detectNeighbouringNATRouteDrift reports (as an error) any divergence between
+// dpservice neighbor NAT entries under natIP and metalbond's expected hops
+// for (vni, dest). Read-only. Bidirectional (see detectLBTargetRouteDrift).
+func (c *MetalnetClient) detectNeighbouringNATRouteDrift(
+	ctx context.Context, natIP netip.Addr, vni mb.VNI, dest mb.Destination,
+) error {
+	nats, err := c.dpdk.ListNeighborNats(ctx, &natIP)
+	if err != nil {
+		return fmt.Errorf("list neighbor nats for %s: %w", natIP, err)
+	}
+	hops := c.mbInstance.GetNextHopByVniAndDestination(vni, dest)
+
+	natMatch := func(n dpdk.Nat, h mb.NextHop) bool {
+		return h.Type == mbproto.NextHopType_NAT &&
+			n.Spec.MinPort == uint32(h.NATPortRangeFrom) &&
+			n.Spec.MaxPort == uint32(h.NATPortRangeTo) &&
+			n.Spec.UnderlayRoute.String() == h.TargetAddress.String()
+	}
+
+	// Direction 1: unexpected in dpservice
+	var driftErrs []error
+	if len(hops) == 0 {
+		c.log.V(1).Info("skipping neighbor NAT 'unexpected' check: no hops known",
+			"vni", vni, "natIP", natIP)
+	} else {
+		for _, n := range nats.Items {
+			matched := false
+			for _, h := range hops {
+				if natMatch(n, h) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				driftErrs = append(driftErrs, fmt.Errorf(
+					"unexpected neighbor NAT in dpservice: natIP=%s vni=%d ports=%d-%d ul=%s",
+					natIP, n.Spec.Vni, n.Spec.MinPort, n.Spec.MaxPort, n.Spec.UnderlayRoute))
+			}
+		}
+	}
+
+	// Direction 2: missing from dpservice
+	for _, h := range hops {
+		if h.Type != mbproto.NextHopType_NAT {
+			continue
+		}
+		matched := false
+		for _, n := range nats.Items {
+			if natMatch(n, h) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			driftErrs = append(driftErrs, fmt.Errorf(
+				"missing neighbor NAT in dpservice: natIP=%s vni=%d ports=%d-%d ul=%s",
+				natIP, vni, h.NATPortRangeFrom, h.NATPortRangeTo, h.TargetAddress))
+		}
+	}
+
+	return errors.Join(driftErrs...)
 }
