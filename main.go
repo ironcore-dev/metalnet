@@ -108,6 +108,7 @@ func main() {
 	var metalbondTxChanCapacity int
 	var metalbondRxChanEventCapacity int
 	var metalbondRxChanDataUpdateCapacity int
+	var routeDriftDetection bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -144,6 +145,8 @@ func main() {
 	flag.IntVar(&metalbondRxChanDataUpdateCapacity, "metalbond-rx-chan-data-update-capacity", 100,
 		"Defines the capacity for subscription and update messages (e.g., SUBSCRIBE, UNSUBSCRIBE, UPDATE); "+
 			"manages the message queue for data updates and subscriptions.")
+	flag.BoolVar(&routeDriftDetection, "route-drift-detection", false,
+		"detect divergence between dpservice installed route state (LB targets, neighbor NATs) and metalbond's route table. Read-only detection; no auto-cleanup.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -324,7 +327,8 @@ func main() {
 
 	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr,
 		metalbond.ClientOptions{
-			PreferredNetwork: preferredNetwork,
+			PreferredNetwork:    preferredNetwork,
+			RouteDriftDetection: routeDriftDetection,
 		})
 
 	config := mb.Config{
