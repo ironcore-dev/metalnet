@@ -7,7 +7,7 @@ require (
 	github.com/ironcore-dev/controller-utils v0.13.0
 	github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17
 	github.com/ironcore-dev/ironcore v0.5.1-0.20260804090802-d4dab327b377
-	github.com/ironcore-dev/metalbond v0.5.0
+	github.com/ironcore-dev/metalbond v0.5.1-0.20260826141731-d6f06ca4b7d3
 	github.com/jaypipes/ghw v0.25.0
 	github.com/onsi/ginkgo/v2 v2.32.1
 	github.com/onsi/gomega v1.42.1
@@ -103,7 +103,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

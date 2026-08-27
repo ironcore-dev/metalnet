@@ -137,7 +137,8 @@ var _ = BeforeSuite(func() {
 
 	metalnetCache = internal.NewMetalnetCache(&logger)
 	metalnetMBClient = metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr, metalbond.ClientOptions{
-		PreferredNetwork: nil,
+		PreferredNetwork:    nil,
+		RouteDriftDetection: true,
 	})
 
 	mbInstance := mb.NewMetalBond(config, metalnetMBClient)
