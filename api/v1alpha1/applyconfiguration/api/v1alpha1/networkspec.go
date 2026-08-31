@@ -13,11 +13,14 @@ package v1alpha1
 // NetworkSpec defines the desired state of Network
 type NetworkSpecApplyConfiguration struct {
 	// ID is the unique identifier of the Network
-	ID *int32 `json:"id,omitempty"`
+	ID               *int32 `json:"id,omitempty"`
+	EnableEncryption *bool  `json:"enableEncryption,omitempty"`
 	// PeeredIDs are the IDs of networks to peer with.
 	PeeredIDs []int32 `json:"peeredIDs,omitempty"`
 	// PeeredPrefixes are the allowed CIDRs of the peered networks.
 	PeeredPrefixes []PeeredPrefixApplyConfiguration `json:"peeredPrefixes,omitempty"`
+	// EnableFoo enables the Foo behavior for this network.
+	EnableFoo *bool `json:"enableFoo,omitempty"`
 }
 
 // NetworkSpecApplyConfiguration constructs a declarative configuration of the NetworkSpec type for use with
@@ -31,6 +34,14 @@ func NetworkSpec() *NetworkSpecApplyConfiguration {
 // If called multiple times, the ID field is set to the value of the last call.
 func (b *NetworkSpecApplyConfiguration) WithID(value int32) *NetworkSpecApplyConfiguration {
 	b.ID = &value
+	return b
+}
+
+// WithEnableEncryption sets the EnableEncryption field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the EnableEncryption field is set to the value of the last call.
+func (b *NetworkSpecApplyConfiguration) WithEnableEncryption(value bool) *NetworkSpecApplyConfiguration {
+	b.EnableEncryption = &value
 	return b
 }
 
@@ -54,5 +65,13 @@ func (b *NetworkSpecApplyConfiguration) WithPeeredPrefixes(values ...*PeeredPref
 		}
 		b.PeeredPrefixes = append(b.PeeredPrefixes, *values[i])
 	}
+	return b
+}
+
+// WithEnableFoo sets the EnableFoo field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the EnableFoo field is set to the value of the last call.
+func (b *NetworkSpecApplyConfiguration) WithEnableFoo(value bool) *NetworkSpecApplyConfiguration {
+	b.EnableFoo = &value
 	return b
 }
