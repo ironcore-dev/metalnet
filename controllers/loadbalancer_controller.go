@@ -256,6 +256,19 @@ func (r *LoadBalancerReconciler) reconcile(ctx context.Context, log logr.Logger,
 		return ctrl.Result{}, nil
 	}
 
+	if !network.DeletionTimestamp.IsZero() {
+		r.Eventf(lb, nil, corev1.EventTypeWarning, "NetworkTerminating",
+			"Reconcile", "Parent Network %s is being deleted; skipping", networkKey.Name)
+		if err := r.patchStatus(ctx, lb, func() {
+			lb.Status = metalnetv1alpha1.LoadBalancerStatus{
+				State: metalnetv1alpha1.LoadBalancerStatePending,
+			}
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
 	vni := uint32(network.Spec.ID)
 	log.V(1).Info("Got network", "NetworkKey", networkKey, "VNI", vni)
 

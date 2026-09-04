@@ -790,6 +790,17 @@ func (r *NetworkInterfaceReconciler) reconcile(ctx context.Context, log logr.Log
 		return ctrl.Result{}, nil
 	}
 
+	if !network.DeletionTimestamp.IsZero() {
+		r.Eventf(nic, nil, corev1.EventTypeWarning, "NetworkTerminating",
+			"Reconcile", "Parent Network %s is being deleted; skipping", networkKey.Name)
+		if err := r.patchStatus(ctx, nic, func() {
+			nic.Status.State = metalnetv1alpha1.NetworkInterfaceStatePending
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
 	isValid, err := r.isValidInterfaceSpec(&nic.Spec)
 	if !isValid {
 		if errPatch := r.patchStatus(ctx, nic, func() {
