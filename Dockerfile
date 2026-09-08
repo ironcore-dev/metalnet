@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -ldflags="-s -w -X main.buildVersion=$(git describe --tags)" -a -o manager main.go
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 WORKDIR /
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
