@@ -105,6 +105,7 @@ func main() {
 	var initAvailable []ghw.PCIAddress
 	var defaultRouterAddr metalbond.DefaultRouterAddress
 	var tlsOpts []func(*tls.Config)
+	var routeDriftDetection bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -132,6 +133,8 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&metalnetDir, "metalnet-dir", "/var/lib/metalnet", "Directory to store metalnet data at.")
 	flag.StringVar(&preferNetwork, "prefer-network", "", "Prefer network routes (e.g. 2001:db8::1/52)")
+	flag.BoolVar(&routeDriftDetection, "route-drift-detection", false,
+		"detect divergence between dpservice installed route state (LB targets, neighbor NATs) and metalbond's route table. Read-only detection; no auto-cleanup.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -312,7 +315,8 @@ func main() {
 
 	metalnetMBClient := metalbond.NewMetalnetClient(&logger, dpdkClient, metalnetCache, &defaultRouterAddr,
 		metalbond.ClientOptions{
-			PreferredNetwork: preferredNetwork,
+			PreferredNetwork:    preferredNetwork,
+			RouteDriftDetection: routeDriftDetection,
 		})
 
 	config := mb.Config{
