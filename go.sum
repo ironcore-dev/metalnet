@@ -105,8 +105,8 @@ github.com/ironcore-dev/controller-utils v0.14.0 h1:ZRKcTKHxj8xNJDX1t225YoCTykw7
 github.com/ironcore-dev/controller-utils v0.14.0/go.mod h1:r0ANgOsXV7Xo+V8z93frNJMnZdE1ZWc9j2djOKWEigA=
 github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17 h1:DCF6BH7EXqQ2kSoouUBsIpP5z0IZwa3o+l3pCYPDxY8=
 github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17/go.mod h1:d5x2tPmu1yqrVHac/FvL+MFOeEb3IT4gn7Bj4+Xkj8M=
-github.com/ironcore-dev/ironcore v0.7.0 h1:4etot/jtAkmXJj98RnyjJR16tewSSFZNDkQKgJDOxpM=
-github.com/ironcore-dev/ironcore v0.7.0/go.mod h1:1Jz0yG2Hpt838Rg5WJayj8NjiiSaIwETVogLP/VOynk=
+github.com/ironcore-dev/ironcore v0.8.0 h1:llh4S1ZK9gLdUPBAUb/dODHaiYk69x4Vi+gpF6aM0sg=
+github.com/ironcore-dev/ironcore v0.8.0/go.mod h1:1Jz0yG2Hpt838Rg5WJayj8NjiiSaIwETVogLP/VOynk=
 github.com/ironcore-dev/metalbond v0.5.0 h1:aWVHkG3anQeVo00hHkPjhLOQwfaq4Yhp9/Bk8nGJH4o=
 github.com/ironcore-dev/metalbond v0.5.0/go.mod h1:TssDAze8ldQycRYM3bNc3MJqi+ppvKiTkSs1FzWwlrk=
 github.com/jaypipes/ghw v0.25.0 h1:+7HlAHtQSrCOafYC6oRjqxuCzDZXBr2dFgVlYRRafrs=
@@ -140,8 +140,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/onsi/ginkgo/v2 v2.33.0 h1:C8gBA6Uc2ZEubiV+SXiu5tZnMTwEmXHgkJwGozKtZf8=
 github.com/onsi/ginkgo/v2 v2.33.0/go.mod h1:+aXOY+vzZ5mu2iI2HpTZUPmM//oQfsNFX6gU9kNcA44=
-github.com/onsi/gomega v1.43.1 h1:vGIPFuYrIO6/0Z09s0I0QQQgFchiX4+tb1re3MScJYo=
-github.com/onsi/gomega v1.43.1/go.mod h1:e/C2HwaZ1DhvjzXXuFhcR7hY7Sh9pl7MmoWKEjzwcdA=
+github.com/onsi/gomega v1.44.0 h1:eAiGl3Pw5jz5GQdDff0BcxYpAX1JxW8xD7mFUuwNfZQ=
+github.com/onsi/gomega v1.44.0/go.mod h1:e/C2HwaZ1DhvjzXXuFhcR7hY7Sh9pl7MmoWKEjzwcdA=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
