@@ -76,7 +76,7 @@ int32
 <td>
 <code>ipFamily</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#ipfamily-v1-core">
 Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -320,7 +320,7 @@ int32
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -347,7 +347,7 @@ LoadBalancerSpec
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -373,7 +373,7 @@ LoadBalancerType
 <td>
 <code>ipFamily</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#ipfamily-v1-core">
 Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -456,7 +456,7 @@ LoadBalancerStatus
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -482,7 +482,7 @@ LoadBalancerType
 <td>
 <code>ipFamily</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#ipfamily-v1-core">
 Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -754,7 +754,7 @@ int32
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -847,7 +847,7 @@ NetworkStatus
 <td>
 <code>metadata</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -875,7 +875,7 @@ NetworkInterfaceSpec
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -888,7 +888,7 @@ Kubernetes core/v1.LocalObjectReference
 <td>
 <code>ipFamilies</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#ipfamily-v1-core">
 []Kubernetes core/v1.IPFamily
 </a>
 </em>
@@ -1050,7 +1050,7 @@ NetworkInterfaceStatus
 <td>
 <code>networkRef</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#localobjectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
@@ -1063,7 +1063,7 @@ Kubernetes core/v1.LocalObjectReference
 <td>
 <code>ipFamilies</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#ipfamily-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.37/#ipfamily-v1-core">
 []Kubernetes core/v1.IPFamily
 </a>
 </em>
