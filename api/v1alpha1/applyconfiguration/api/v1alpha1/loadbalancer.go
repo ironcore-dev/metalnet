@@ -6,8 +6,11 @@
 package v1alpha1
 
 import (
+	apiv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
+	internal "github.com/ironcore-dev/metalnet/api/v1alpha1/applyconfiguration/internal"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
@@ -16,7 +19,7 @@ import (
 //
 // LoadBalancer is the Schema for the loadbalancers API
 type LoadBalancerApplyConfiguration struct {
-	v1.TypeMetaApplyConfiguration    `json:",inline"`
+	v1.TypeMetaApplyConfiguration    `json:""`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
 	Spec                             *LoadBalancerSpecApplyConfiguration   `json:"spec,omitempty"`
 	Status                           *LoadBalancerStatusApplyConfiguration `json:"status,omitempty"`
@@ -31,6 +34,47 @@ func LoadBalancer(name, namespace string) *LoadBalancerApplyConfiguration {
 	b.WithKind("LoadBalancer")
 	b.WithAPIVersion("networking.metalnet.ironcore.dev/v1alpha1")
 	return b
+}
+
+// ExtractLoadBalancerFrom extracts the applied configuration owned by fieldManager from
+// loadBalancer for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// loadBalancer must be a unmodified LoadBalancer API object that was retrieved from the Kubernetes API.
+// ExtractLoadBalancerFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractLoadBalancerFrom(loadBalancer *apiv1alpha1.LoadBalancer, fieldManager string, subresource string) (*LoadBalancerApplyConfiguration, error) {
+	b := &LoadBalancerApplyConfiguration{}
+	err := managedfields.ExtractInto(loadBalancer, internal.Parser().Type("com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancer"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(loadBalancer.Name)
+	b.WithNamespace(loadBalancer.Namespace)
+
+	b.WithKind("LoadBalancer")
+	b.WithAPIVersion("networking.metalnet.ironcore.dev/v1alpha1")
+	return b, nil
+}
+
+// ExtractLoadBalancer extracts the applied configuration owned by fieldManager from
+// loadBalancer. If no managedFields are found in loadBalancer for fieldManager, a
+// LoadBalancerApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// loadBalancer must be a unmodified LoadBalancer API object that was retrieved from the Kubernetes API.
+// ExtractLoadBalancer provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractLoadBalancer(loadBalancer *apiv1alpha1.LoadBalancer, fieldManager string) (*LoadBalancerApplyConfiguration, error) {
+	return ExtractLoadBalancerFrom(loadBalancer, fieldManager, "")
+}
+
+// ExtractLoadBalancerStatus extracts the applied configuration owned by fieldManager from
+// loadBalancer for the status subresource.
+func ExtractLoadBalancerStatus(loadBalancer *apiv1alpha1.LoadBalancer, fieldManager string) (*LoadBalancerApplyConfiguration, error) {
+	return ExtractLoadBalancerFrom(loadBalancer, fieldManager, "status")
 }
 
 func (b LoadBalancerApplyConfiguration) IsApplyConfiguration() {}

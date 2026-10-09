@@ -77,7 +77,9 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	apiServer := &envtest.APIServer{}
-	apiServer.Configure().Set("advertise-address", "127.0.0.1")
+	apiServer.Configure().
+		Set("advertise-address", "127.0.0.1").
+		Set("endpoint-reconciler-type", "none")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,

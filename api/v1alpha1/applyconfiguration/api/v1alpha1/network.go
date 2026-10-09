@@ -6,8 +6,11 @@
 package v1alpha1
 
 import (
+	apiv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
+	internal "github.com/ironcore-dev/metalnet/api/v1alpha1/applyconfiguration/internal"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
@@ -16,7 +19,7 @@ import (
 //
 // Network is the Schema for the networks API
 type NetworkApplyConfiguration struct {
-	v1.TypeMetaApplyConfiguration    `json:",inline"`
+	v1.TypeMetaApplyConfiguration    `json:""`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
 	Spec                             *NetworkSpecApplyConfiguration   `json:"spec,omitempty"`
 	Status                           *NetworkStatusApplyConfiguration `json:"status,omitempty"`
@@ -31,6 +34,47 @@ func Network(name, namespace string) *NetworkApplyConfiguration {
 	b.WithKind("Network")
 	b.WithAPIVersion("networking.metalnet.ironcore.dev/v1alpha1")
 	return b
+}
+
+// ExtractNetworkFrom extracts the applied configuration owned by fieldManager from
+// network for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
+// network must be a unmodified Network API object that was retrieved from the Kubernetes API.
+// ExtractNetworkFrom provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractNetworkFrom(network *apiv1alpha1.Network, fieldManager string, subresource string) (*NetworkApplyConfiguration, error) {
+	b := &NetworkApplyConfiguration{}
+	err := managedfields.ExtractInto(network, internal.Parser().Type("com.github.ironcore-dev.metalnet.api.v1alpha1.Network"), fieldManager, b, subresource)
+	if err != nil {
+		return nil, err
+	}
+	b.WithName(network.Name)
+	b.WithNamespace(network.Namespace)
+
+	b.WithKind("Network")
+	b.WithAPIVersion("networking.metalnet.ironcore.dev/v1alpha1")
+	return b, nil
+}
+
+// ExtractNetwork extracts the applied configuration owned by fieldManager from
+// network. If no managedFields are found in network for fieldManager, a
+// NetworkApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// network must be a unmodified Network API object that was retrieved from the Kubernetes API.
+// ExtractNetwork provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractNetwork(network *apiv1alpha1.Network, fieldManager string) (*NetworkApplyConfiguration, error) {
+	return ExtractNetworkFrom(network, fieldManager, "")
+}
+
+// ExtractNetworkStatus extracts the applied configuration owned by fieldManager from
+// network for the status subresource.
+func ExtractNetworkStatus(network *apiv1alpha1.Network, fieldManager string) (*NetworkApplyConfiguration, error) {
+	return ExtractNetworkFrom(network, fieldManager, "status")
 }
 
 func (b NetworkApplyConfiguration) IsApplyConfiguration() {}

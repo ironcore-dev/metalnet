@@ -26,6 +26,491 @@ func Parser() *typed.Parser {
 var parserOnce sync.Once
 var parser *typed.Parser
 var schemaYAML = typed.YAMLObject(`types:
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.FirewallRule
+  map:
+    fields:
+    - name: action
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.FirewallRuleAction
+    - name: destinationPrefix
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+    - name: direction
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.FirewallRuleDirection
+    - name: firewallRuleID
+      type:
+        namedType: io.k8s.apimachinery.pkg.types.UID
+    - name: ipFamily
+      type:
+        namedType: io.k8s.api.core.v1.IPFamily
+    - name: priority
+      type:
+        scalar: numeric
+      default: 1000
+    - name: protocolMatch
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.ProtocolMatch
+    - name: sourcePrefix
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.FirewallRuleAction
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.FirewallRuleDirection
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.ICMPMatch
+  map:
+    fields:
+    - name: icmpCode
+      type:
+        scalar: numeric
+    - name: icmpType
+      type:
+        scalar: numeric
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.IP
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.LBPort
+  map:
+    fields:
+    - name: port
+      type:
+        scalar: numeric
+    - name: protocol
+      type:
+        scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancer
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerSpec
+    - name: status
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerStatus
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerSpec
+  map:
+    fields:
+    - name: ip
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IP
+    - name: ipFamily
+      type:
+        namedType: io.k8s.api.core.v1.IPFamily
+    - name: networkRef
+      type:
+        namedType: io.k8s.api.core.v1.LocalObjectReference
+    - name: nodeName
+      type:
+        scalar: string
+    - name: ports
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.LBPort
+          elementRelationship: atomic
+    - name: type
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerType
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerState
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerStatus
+  map:
+    fields:
+    - name: state
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerState
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.LoadBalancerType
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.MeteringParameters
+  map:
+    fields:
+    - name: publicRate
+      type:
+        scalar: numeric
+    - name: totalRate
+      type:
+        scalar: numeric
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NATDetails
+  map:
+    fields:
+    - name: endPort
+      type:
+        scalar: numeric
+    - name: ip
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IP
+    - name: port
+      type:
+        scalar: numeric
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.Network
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkSpec
+    - name: status
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkStatus
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkInterface
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+    - name: spec
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkInterfaceSpec
+    - name: status
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkInterfaceStatus
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkInterfaceSpec
+  map:
+    fields:
+    - name: firewallRules
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.FirewallRule
+          elementRelationship: atomic
+    - name: hostname
+      type:
+        scalar: string
+    - name: ipFamilies
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.api.core.v1.IPFamily
+          elementRelationship: atomic
+    - name: ips
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IP
+          elementRelationship: atomic
+    - name: loadBalancerTargets
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+          elementRelationship: atomic
+    - name: meteringRate
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.MeteringParameters
+    - name: nat
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NATDetails
+    - name: networkRef
+      type:
+        namedType: io.k8s.api.core.v1.LocalObjectReference
+    - name: nodeName
+      type:
+        scalar: string
+    - name: prefixes
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+          elementRelationship: atomic
+    - name: virtualIP
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IP
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkInterfaceState
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkInterfaceStatus
+  map:
+    fields:
+    - name: loadBalancerTargets
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+          elementRelationship: atomic
+    - name: natIP
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NATDetails
+    - name: pciAddress
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.PCIAddress
+    - name: prefixes
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+          elementRelationship: atomic
+    - name: state
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkInterfaceState
+    - name: tapDevice
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.TAPDevice
+    - name: virtualIP
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IP
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkPeeringState
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkPeeringStatus
+  map:
+    fields:
+    - name: id
+      type:
+        scalar: numeric
+    - name: state
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkPeeringState
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkSpec
+  map:
+    fields:
+    - name: id
+      type:
+        scalar: numeric
+    - name: peeredIDs
+      type:
+        list:
+          elementType:
+            scalar: numeric
+          elementRelationship: atomic
+    - name: peeredPrefixes
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.PeeredPrefix
+          elementRelationship: associative
+          keys:
+          - id
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkStatus
+  map:
+    fields:
+    - name: peerings
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.NetworkPeeringStatus
+          elementRelationship: atomic
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.PCIAddress
+  map:
+    fields:
+    - name: bus
+      type:
+        scalar: string
+    - name: domain
+      type:
+        scalar: string
+    - name: function
+      type:
+        scalar: string
+    - name: slot
+      type:
+        scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.PeeredPrefix
+  map:
+    fields:
+    - name: id
+      type:
+        scalar: numeric
+    - name: prefixes
+      type:
+        list:
+          elementType:
+            namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.IPPrefix
+          elementRelationship: atomic
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.PortMatch
+  map:
+    fields:
+    - name: dstPort
+      type:
+        scalar: numeric
+    - name: endDstPort
+      type:
+        scalar: numeric
+    - name: endSrcPort
+      type:
+        scalar: numeric
+    - name: srcPort
+      type:
+        scalar: numeric
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.ProtocolMatch
+  map:
+    fields:
+    - name: icmp
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.ICMPMatch
+    - name: portRange
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.PortMatch
+    - name: protocolType
+      type:
+        namedType: com.github.ironcore-dev.metalnet.api.v1alpha1.ProtocolType
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.ProtocolType
+  scalar: string
+- name: com.github.ironcore-dev.metalnet.api.v1alpha1.TAPDevice
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+- name: io.k8s.api.core.v1.IPFamily
+  scalar: string
+- name: io.k8s.api.core.v1.LocalObjectReference
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
+      default: ""
+    elementRelationship: atomic
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1
+  map:
+    elementType:
+      scalar: untyped
+      list:
+        elementType:
+          namedType: __untyped_atomic_
+        elementRelationship: atomic
+      map:
+        elementType:
+          namedType: __untyped_deduced_
+        elementRelationship: separable
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: fieldsType
+      type:
+        scalar: string
+    - name: fieldsV1
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1
+    - name: manager
+      type:
+        scalar: string
+    - name: operation
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsOperationType
+    - name: subresource
+      type:
+        scalar: string
+    - name: time
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsOperationType
+  scalar: string
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+  map:
+    fields:
+    - name: annotations
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: creationTimestamp
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+    - name: deletionGracePeriodSeconds
+      type:
+        scalar: numeric
+    - name: deletionTimestamp
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+    - name: finalizers
+      type:
+        list:
+          elementType:
+            scalar: string
+          elementRelationship: associative
+    - name: generateName
+      type:
+        scalar: string
+    - name: generation
+      type:
+        scalar: numeric
+    - name: labels
+      type:
+        map:
+          elementType:
+            scalar: string
+    - name: managedFields
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ManagedFieldsEntry
+          elementRelationship: atomic
+    - name: name
+      type:
+        scalar: string
+    - name: namespace
+      type:
+        scalar: string
+    - name: ownerReferences
+      type:
+        list:
+          elementType:
+            namedType: io.k8s.apimachinery.pkg.apis.meta.v1.OwnerReference
+          elementRelationship: associative
+          keys:
+          - uid
+    - name: resourceVersion
+      type:
+        scalar: string
+    - name: selfLink
+      type:
+        scalar: string
+    - name: uid
+      type:
+        namedType: io.k8s.apimachinery.pkg.types.UID
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.OwnerReference
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: blockOwnerDeletion
+      type:
+        scalar: boolean
+    - name: controller
+      type:
+        scalar: boolean
+    - name: kind
+      type:
+        scalar: string
+    - name: name
+      type:
+        scalar: string
+    - name: uid
+      type:
+        namedType: io.k8s.apimachinery.pkg.types.UID
+    elementRelationship: atomic
+- name: io.k8s.apimachinery.pkg.apis.meta.v1.Time
+  scalar: untyped
+- name: io.k8s.apimachinery.pkg.types.UID
+  scalar: string
 - name: __untyped_atomic_
   scalar: untyped
   list:
