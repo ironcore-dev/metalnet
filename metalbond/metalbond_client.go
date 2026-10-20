@@ -68,7 +68,7 @@ func (c *MetalnetClient) SetMetalBond(mb *mb.MetalBond) {
 	c.mbInstance = mb
 }
 
-func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, hop mb.NextHop, is_peering bool) error {
+func (c *MetalnetClient) addLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.Destination, hop mb.NextHop) error {
 	ctx := context.TODO()
 
 	if hop.Type == mbproto.NextHopType_LOADBALANCER_TARGET {
@@ -220,7 +220,7 @@ func (c *MetalnetClient) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.De
 				continue
 			}
 			c.log.Info(fmt.Sprintf("Install the next available hop ul %s for ip %s, vni: %d", h, dest.String(), vni))
-			if err := c.addLocalRoute(destVni, vni, dest, h, true); err != nil {
+			if err := c.addLocalRoute(destVni, vni, dest, h); err != nil {
 				return fmt.Errorf("error adding available next hop: %w", err)
 			}
 			break
@@ -270,7 +270,7 @@ func (c *MetalnetClient) HandlePeeringRoutes(vni mb.VNI, dest mb.Destination, ho
 				}
 
 				if addRoute {
-					if err := c.addLocalRoute(vni, mb.VNI(peeredVNI), dest, hop, true); err != nil {
+					if err := c.addLocalRoute(vni, mb.VNI(peeredVNI), dest, hop); err != nil {
 						errStrs = append(errStrs, err.Error())
 					}
 				}
@@ -313,7 +313,7 @@ func (c *MetalnetClient) AddRoute(vni mb.VNI, dest mb.Destination, hop mb.NextHo
 		return nil
 	}
 
-	if err := c.addLocalRoute(vni, vni, dest, hop, false); err != nil {
+	if err := c.addLocalRoute(vni, vni, dest, hop); err != nil {
 		errStrs = append(errStrs, err.Error())
 	}
 
