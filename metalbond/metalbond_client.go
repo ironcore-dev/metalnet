@@ -207,6 +207,25 @@ func (c *MetalnetClient) removeLocalRoute(destVni mb.VNI, vni mb.VNI, dest mb.De
 	); err != nil {
 		return fmt.Errorf("error deleting route: %w", err)
 	}
+
+	// some backend client (e.g., dpservice) does not install all received next hops for a destination.
+	// if one hop for a destination is removed, other received available nexthops will not be installed
+	// even though they exist in the received routing table.  e.g., private VIP frontends.
+	// It is valid to do here, because intended deleted route is firstly removed from the routing table,
+	// then this function is called.
+	remainingHops := c.mbInstance.GetNextHopByVniAndDestination(destVni, dest)
+	if len(remainingHops) > 0 {
+		for _, h := range remainingHops {
+			if h.Type != mbproto.NextHopType_STANDARD {
+				continue
+			}
+			c.log.Info(fmt.Sprintf("Install the next available hop ul %s for ip %s, vni: %d", h, dest.String(), vni))
+			if err := c.addLocalRoute(destVni, vni, dest, h, true); err != nil {
+				return fmt.Errorf("error adding available next hop: %w", err)
+			}
+			break
+		}
+	}
 	return nil
 }
 
