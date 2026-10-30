@@ -105,8 +105,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 h1:5VipnvEpbqr2gA2VbM+nYVbkIF2
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0/go.mod h1:Hyl3n6Twe1hvtd9XUXDec4pTvgMSEixRuQKPTMH2bNs=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/ironcore-dev/controller-utils v0.14.1-0.20260904065051-9ddd709051f4 h1:fKocO3kKaPg6c1SDufxAM+k5abTTfoIk4U/t+IjSOEI=
-github.com/ironcore-dev/controller-utils v0.14.1-0.20260904065051-9ddd709051f4/go.mod h1:8rLIaac9ovKzlKupxCrw9V/IF2rjI6zqv+VI0kRS6fE=
+github.com/ironcore-dev/controller-utils v0.15.1 h1:m7ucpzQgMYBF8adnPTesmJ5Ca2lsXVJVKGJVhA1TVx8=
+github.com/ironcore-dev/controller-utils v0.15.1/go.mod h1:E/3nSv9TxRtSGpejWMwLTxbb9fknTcPhcA8moHXa0sY=
 github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17 h1:DCF6BH7EXqQ2kSoouUBsIpP5z0IZwa3o+l3pCYPDxY8=
 github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17/go.mod h1:d5x2tPmu1yqrVHac/FvL+MFOeEb3IT4gn7Bj4+Xkj8M=
 github.com/ironcore-dev/ironcore v0.8.1-0.20261008070126-308a8977709e h1:odALW6ZVrcZuYtAHqSkIzQR5rIdfzCY4owOaigJnv9Y=

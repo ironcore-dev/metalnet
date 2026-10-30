@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/go-logr/logr v1.4.4
-	github.com/ironcore-dev/controller-utils v0.14.1-0.20260904065051-9ddd709051f4
+	github.com/ironcore-dev/controller-utils v0.15.1
 	github.com/ironcore-dev/dpservice/go/dpservice-go v0.3.17
 	github.com/ironcore-dev/ironcore v0.8.1-0.20261008070126-308a8977709e
 	github.com/ironcore-dev/metalbond v0.6.2
