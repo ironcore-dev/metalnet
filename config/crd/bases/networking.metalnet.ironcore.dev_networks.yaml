@@ -49,6 +49,10 @@ spec:
           spec:
             description: NetworkSpec defines the desired state of Network
             properties:
+              enableEncryption:
+                default: false
+                description: EnableEncryption enables encryption for this network.
+                type: boolean
               id:
                 description: ID is the unique identifier of the Network
                 format: int32

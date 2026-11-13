@@ -7,10 +7,14 @@ import (
 	"context"
 	"errors"
 	"net/netip"
+	"os"
 	"sync"
 
 	"github.com/ironcore-dev/metalbond"
 	"github.com/ironcore-dev/metalbond/pb"
+	keyexchangeclient "github.com/ironcore-dev/metalnet/key_exchange_client"
+	mlsexchange "github.com/ironcore-dev/metalnet/key_exchange_client/mls_exchange"
+	"github.com/sirupsen/logrus"
 )
 
 type DefaultRouteOperation int
@@ -30,7 +34,7 @@ type DefaultRouterAddress struct {
 type RouteUtil interface {
 	AnnounceRoute(ctx context.Context, vni VNI, destination Destination, nextHop NextHop) error
 	WithdrawRoute(ctx context.Context, vni VNI, destination Destination, nextHop NextHop) error
-	Subscribe(ctx context.Context, vni VNI) error
+	Subscribe(ctx context.Context, vni VNI, enableEncryption bool) error
 	Unsubscribe(ctx context.Context, vni VNI) error
 	IsSubscribed(ctx context.Context, vni VNI) bool
 	GetRoutesForVni(ctx context.Context, vni VNI) error
@@ -38,11 +42,22 @@ type RouteUtil interface {
 }
 
 type MBRouteUtil struct {
-	metalbond *metalbond.MetalBond
+	key_exchange keyexchangeclient.KexExchangeClient
+	metalbond    *metalbond.MetalBond
 }
 
 func NewMBRouteUtil(mb *metalbond.MetalBond) *MBRouteUtil {
-	return &MBRouteUtil{mb}
+	var keyExchangeClient keyexchangeclient.KexExchangeClient
+	if agentAddress, exists := os.LookupEnv("KEY_AGENT_GRPC_ADDRESS"); exists {
+		keyExchangeClient = mlsexchange.InitKeyExchangeConnection(agentAddress)
+		logrus.Info("key-exchange was initialized")
+	} else {
+		logrus.Info("KEY_AGENT_GRPC_ADDRESS is not set, so the key-exchange is not initialized")
+	}
+	return &MBRouteUtil{
+		metalbond:    mb,
+		key_exchange: keyExchangeClient,
+	}
 }
 
 type VNI = metalbond.VNI
@@ -132,7 +147,19 @@ func (c *MBRouteUtil) WithdrawRoute(_ context.Context, vni VNI, destination Dest
 	return nil
 }
 
-func (c *MBRouteUtil) Subscribe(_ context.Context, vni VNI) error {
+func (c *MBRouteUtil) Subscribe(_ context.Context, vni VNI, enableEncryption bool) error {
+	if enableEncryption && c.key_exchange != nil {
+		err := c.key_exchange.Subscribe(context.Background(), uint32(vni))
+		if err != nil {
+			logrus.Errorf("Subscribe failed for VNI %d: %v", vni, err)
+		}
+
+		_, err = c.key_exchange.IsKeyReady(context.Background(), uint32(vni), 42)
+		if err != nil {
+			logrus.Errorf("Check key ready failed for VNI %d: %v", vni, err)
+		}
+	}
+
 	return c.metalbond.Subscribe(vni)
 }
 
