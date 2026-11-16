@@ -22,6 +22,7 @@ import (
 	"github.com/ironcore-dev/metalbond/pb"
 	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
 	metalnetclient "github.com/ironcore-dev/metalnet/client"
+	"github.com/ironcore-dev/metalnet/internal"
 	"github.com/ironcore-dev/metalnet/metalbond"
 	"github.com/ironcore-dev/metalnet/netfns"
 	"github.com/ironcore-dev/metalnet/sysfs"
@@ -81,8 +82,9 @@ type NetworkInterfaceReconciler struct {
 
 	Scheme *runtime.Scheme
 
-	DPDK      dpdkclient.Client
-	RouteUtil metalbond.RouteUtil
+	DPDK          dpdkclient.Client
+	RouteUtil     metalbond.RouteUtil
+	MetalnetCache *internal.MetalnetCache
 
 	NetFnsManager *netfns.Manager
 	SysFS         sysfs.FS
@@ -305,7 +307,7 @@ func (r *NetworkInterfaceReconciler) removePrefixRouteIfExists(ctx context.Conte
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) addLBTargetRouteIfNotExists(ctx context.Context, vni uint32, prefix netip.Prefix, underlayRoute netip.Addr) error {
+func (r *NetworkInterfaceReconciler) announceLBTargetRouteIfNotExists(ctx context.Context, vni uint32, prefix netip.Prefix, underlayRoute netip.Addr) error {
 	if err := r.RouteUtil.AnnounceRoute(ctx, metalbond.VNI(vni), metalbond.Destination{
 		Prefix: prefix,
 	}, metalbond.NextHop{
@@ -318,7 +320,7 @@ func (r *NetworkInterfaceReconciler) addLBTargetRouteIfNotExists(ctx context.Con
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) removeLBTargetRouteIfExists(ctx context.Context, vni uint32, prefix netip.Prefix, underlayRoute netip.Addr) error {
+func (r *NetworkInterfaceReconciler) withdrawLBTargetRouteIfExists(ctx context.Context, vni uint32, prefix netip.Prefix, underlayRoute netip.Addr) error {
 	if err := r.RouteUtil.WithdrawRoute(ctx, metalbond.VNI(vni), metalbond.Destination{
 		Prefix: prefix,
 	}, metalbond.NextHop{
@@ -460,7 +462,7 @@ func (r *NetworkInterfaceReconciler) deleteDPDKfwRuleIDIfExists(ctx context.Cont
 	return nil
 }
 
-func (r *NetworkInterfaceReconciler) deleteDPDKLBTargetIfExists(ctx context.Context, nicUID types.UID, prefix netip.Prefix) error {
+func (r *NetworkInterfaceReconciler) deleteDPDKLBPrefixIfExists(ctx context.Context, nicUID types.UID, prefix netip.Prefix) error {
 	if _, err := r.DPDK.DeleteLoadBalancerPrefix(
 		ctx,
 		string(nicUID),
@@ -1079,22 +1081,36 @@ func (r *NetworkInterfaceReconciler) reconcileLBTargets(ctx context.Context, log
 				if err != nil {
 					return err
 				}
-				log.V(1).Info("Ensuring metalbond prefix route does not exist")
-				if err := r.removeLBTargetRouteIfExists(ctx, vni, prefix, underlayRoute); err != nil {
-					return err
-				}
-				log.V(1).Info("Ensured metalbond prefix route does not exist")
 
-				log.V(1).Info("Ensuring dpdk lb target does not exist")
-				if err := r.deleteDPDKLBTargetIfExists(ctx, nic.UID, prefix); err != nil {
+				// Teardown order: (1) delete local LB target so dpservice stops
+				// using this backend, (2) withdraw the metalbond announcement
+				// so remote nodes stop using it, (3) only then delete the
+				// dpservice lbprefix.
+				log.V(1).Info("Deleting local dpdk lb target")
+				if uid, ok := r.MetalnetCache.GetLoadBalancerServer(vni, prefix.Addr().String()); ok {
+					if _, err := r.DPDK.DeleteLoadBalancerTarget(ctx, string(uid), &underlayRoute,
+						dpdkerrors.Ignore(dpdkerrors.NOT_FOUND, dpdkerrors.NO_BACKIP, dpdkerrors.NO_LB)); err != nil {
+						return err
+					}
+				}
+				log.V(1).Info("Deleted local dpdk lb target")
+
+				log.V(1).Info("Withdrawing metalbond lb target route")
+				if err := r.withdrawLBTargetRouteIfExists(ctx, vni, prefix, underlayRoute); err != nil {
 					return err
 				}
-				log.V(1).Info("Ensured dpdk lb target does not exist")
+				log.V(1).Info("Withdrew metalbond lb target route")
+
+				log.V(1).Info("Deleting dpdk lb prefix")
+				if err := r.deleteDPDKLBPrefixIfExists(ctx, nic.UID, prefix); err != nil {
+					return err
+				}
+				log.V(1).Info("Deleted dpdk lb prefix")
 				return nil
 			case specPrefixes.Has(prefix) && !dpdkPrefixes.Has(prefix):
 				log.V(1).Info("Create lb target")
 
-				log.V(1).Info("Creating dpdk lb target")
+				log.V(1).Info("Creating dpdk lb prefix")
 				resPrefix, err := r.DPDK.CreateLoadBalancerPrefix(ctx, &dpdk.LoadBalancerPrefix{
 					LoadBalancerPrefixMeta: dpdk.LoadBalancerPrefixMeta{InterfaceID: string(nic.UID)},
 					Spec:                   dpdk.LoadBalancerPrefixSpec{Prefix: prefix},
@@ -1102,10 +1118,20 @@ func (r *NetworkInterfaceReconciler) reconcileLBTargets(ctx context.Context, log
 				if err != nil {
 					return err
 				}
-				log.V(1).Info("Ensured dpdk lb target exists")
+
+				// Install THIS node's backend into its own LB table.
+				if uid, ok := r.MetalnetCache.GetLoadBalancerServer(vni, prefix.Addr().String()); ok {
+					if _, err := r.DPDK.CreateLoadBalancerTarget(ctx, &dpdk.LoadBalancerTarget{
+						LoadBalancerTargetMeta: dpdk.LoadBalancerTargetMeta{LoadbalancerID: string(uid)},
+						Spec:                   dpdk.LoadBalancerTargetSpec{TargetIP: resPrefix.Spec.UnderlayRoute},
+					}, dpdkerrors.Ignore(dpdkerrors.ALREADY_EXISTS)); err != nil {
+						return err
+					}
+				}
+				log.V(1).Info("Ensured dpdk lb prefix and local lb target exist")
 
 				log.V(1).Info("Ensuring metalbond lb target route exists")
-				if err := r.addLBTargetRouteIfNotExists(ctx, vni, prefix, *resPrefix.Spec.UnderlayRoute); err != nil {
+				if err := r.announceLBTargetRouteIfNotExists(ctx, vni, prefix, *resPrefix.Spec.UnderlayRoute); err != nil {
 					return err
 				}
 				log.V(1).Info("Ensured metalbond lb target route exists")
@@ -1128,7 +1154,7 @@ func (r *NetworkInterfaceReconciler) reconcileLBTargets(ctx context.Context, log
 				}
 				underlayRouteAnnounced := r.RouteUtil.IsRouteAnnounced(ctx, metalbond.VNI(vni), dest, nextHop)
 				if !underlayRouteAnnounced {
-					if err := r.addLBTargetRouteIfNotExists(ctx, vni, prefix, underlayRoute); err != nil {
+					if err := r.announceLBTargetRouteIfNotExists(ctx, vni, prefix, underlayRoute); err != nil {
 						return err
 					}
 				} else {
@@ -1507,17 +1533,27 @@ func (r *NetworkInterfaceReconciler) deleteLBTargets(
 		prefix := prefixItem.Spec.Prefix
 		log := log.WithValues("LB Target", prefix)
 		if err := func() error {
-			log.V(1).Info("Removing lb targets route if exists")
-			if err := r.removeLBTargetRouteIfExists(ctx, vni, prefix, *prefixItem.Spec.UnderlayRoute); err != nil {
-				return err
+			// Same teardown order as the per-target path in reconcileLBTargets.
+			log.V(1).Info("Deleting local dpdk lb target if exists")
+			if uid, ok := r.MetalnetCache.GetLoadBalancerServer(vni, prefix.Addr().String()); ok {
+				if _, err := r.DPDK.DeleteLoadBalancerTarget(ctx, string(uid), prefixItem.Spec.UnderlayRoute,
+					dpdkerrors.Ignore(dpdkerrors.NOT_FOUND, dpdkerrors.NO_BACKIP, dpdkerrors.NO_LB)); err != nil {
+					return err
+				}
 			}
-			log.V(1).Info("Removed lb target route if existed")
+			log.V(1).Info("Deleted local dpdk lb target if existed")
 
-			log.V(1).Info("Removing dpdk lb target if exists")
-			if err := r.deleteDPDKLBTargetIfExists(ctx, nic.UID, prefix); err != nil {
+			log.V(1).Info("Withdrawing metalbond lb target route if exists")
+			if err := r.withdrawLBTargetRouteIfExists(ctx, vni, prefix, *prefixItem.Spec.UnderlayRoute); err != nil {
 				return err
 			}
-			log.V(1).Info("Removed dpdk lb target if existed")
+			log.V(1).Info("Withdrew metalbond lb target route if existed")
+
+			log.V(1).Info("Deleting dpdk lb prefix if exists")
+			if err := r.deleteDPDKLBPrefixIfExists(ctx, nic.UID, prefix); err != nil {
+				return err
+			}
+			log.V(1).Info("Deleted dpdk lb prefix if existed")
 			return nil
 		}(); err != nil {
 			errs = append(errs, fmt.Errorf("[lb target %s] %w", prefix, err))

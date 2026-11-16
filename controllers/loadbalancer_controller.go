@@ -56,6 +56,67 @@ type LoadBalancerReconciler struct {
 //+kubebuilder:rbac:groups=networking.metalnet.ironcore.dev,resources=loadbalancers/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
+func (r *LoadBalancerReconciler) PrimeLoadBalancerCache(ctx context.Context, reader client.Reader) error {
+	log := ctrl.LoggerFrom(ctx).WithName("prime-lb-cache")
+
+	lbs := &metalnetv1alpha1.LoadBalancerList{}
+	if err := reader.List(ctx, lbs); err != nil {
+		return fmt.Errorf("list load balancers: %w", err)
+	}
+
+	primed := 0
+	for i := range lbs.Items {
+		lb := &lbs.Items[i]
+		if !isLoadBalancerAssignedToNode(lb, r.NodeName) {
+			continue
+		}
+		vni, ok, err := r.resolveLBVNI(ctx, reader, lb, log)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			continue
+		}
+		ip := lb.Spec.IP.String()
+		if err := r.MetalnetCache.AddLoadBalancerServer(vni, ip, lb.UID); err != nil {
+			return fmt.Errorf("prime lb cache (vni=%d ip=%s): %w", vni, ip, err)
+		}
+		primed++
+	}
+	log.Info("Primed LB cache from k8s", "entries", primed)
+	return nil
+}
+
+// resolveLBVNI returns the VNI an LB should be cached under. It prefers the
+// parent k8s Network's Spec.ID; if the Network is NotFound it falls back to
+// the dpservice record of the LB (its LoadBalancerSpec.VNI).
+func (r *LoadBalancerReconciler) resolveLBVNI(ctx context.Context, reader client.Reader, lb *metalnetv1alpha1.LoadBalancer, log logr.Logger) (uint32, bool, error) {
+	network := &metalnetv1alpha1.Network{}
+	err := reader.Get(ctx, client.ObjectKey{Namespace: lb.Namespace, Name: lb.Spec.NetworkRef.Name}, network)
+	if err == nil {
+		return uint32(network.Spec.ID), true, nil
+	}
+	if !apierrors.IsNotFound(err) {
+		return 0, false, fmt.Errorf("get network %s/%s for lb %s: %w", lb.Namespace, lb.Spec.NetworkRef.Name, lb.Name, err)
+	}
+
+	// Parent Network is gone from k8s but dpservice may still hold the LB and
+	// its backend targets — exactly the state that strands an orphan if a NIC
+	// is deleted before the LB reconciler runs. Ask dpservice for the VNI.
+	dpLB, dpErr := r.DPDK.GetLoadBalancer(ctx, string(lb.UID))
+	if dpErr != nil {
+		if dpdkerrors.IsStatusErrorCode(dpErr, dpdkerrors.NOT_FOUND) {
+			log.V(1).Info("Skipping LB during prime: parent Network missing and dpservice has no record",
+				"lb", client.ObjectKeyFromObject(lb), "network", lb.Spec.NetworkRef.Name)
+			return 0, false, nil
+		}
+		return 0, false, fmt.Errorf("fallback dpservice GetLoadBalancer(%s): %w", lb.UID, dpErr)
+	}
+	log.V(1).Info("Primed LB from dpservice fallback (parent Network missing)",
+		"lb", client.ObjectKeyFromObject(lb), "network", lb.Spec.NetworkRef.Name, "vni", dpLB.Spec.VNI)
+	return dpLB.Spec.VNI, true, nil
+}
+
 func (r *LoadBalancerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 

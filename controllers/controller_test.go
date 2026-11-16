@@ -11,6 +11,7 @@ import (
 	. "github.com/ironcore-dev/ironcore/utils/testing"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
@@ -22,6 +23,7 @@ import (
 	dpdkerrors "github.com/ironcore-dev/dpservice/go/dpservice-go/errors"
 	dpdk "github.com/ironcore-dev/dpservice/go/dpservice-go/proto"
 	metalnetv1alpha1 "github.com/ironcore-dev/metalnet/api/v1alpha1"
+	"github.com/ironcore-dev/metalnet/internal"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -1377,6 +1379,136 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 		})
 	})
 
+	// Regression coverage for the local LB-target cleanup fix: when a backend
+	// stops being an LB target (target dropped or NIC deleted) the backend's
+	// entry must also be removed from the LB's dpservice target table, not just
+	// its lbprefix/route — otherwise an orphan target blackholes ECMP flows.
+	Context("LoadBalancer target cleanup", Label("lb", "lbtarget"), func() {
+		// targetIPs returns the backend underlay addresses currently in the LB's
+		// dpservice target table.
+		targetIPs := func(lbUID string) []string {
+			GinkgoHelper()
+			tl, err := dpdkClient.ListLoadBalancerTargets(ctx, lbUID)
+			Expect(err).NotTo(HaveOccurred())
+			ips := []string{}
+			for _, t := range tl.Items {
+				ips = append(ips, t.Spec.TargetIP.String())
+			}
+			return ips
+		}
+
+		// lbPrefixUnderlay returns the underlay assigned to a NIC's lbprefix for vipPrefix.
+		lbPrefixUnderlay := func(nicUID, vipPrefix string) string {
+			GinkgoHelper()
+			pl, err := dpdkClient.ListLoadBalancerPrefixes(ctx, nicUID)
+			Expect(err).NotTo(HaveOccurred())
+			for _, p := range pl.Items {
+				if p.Spec.Prefix.String() == vipPrefix {
+					return p.Spec.UnderlayRoute.String()
+				}
+			}
+			Fail("no lb prefix " + vipPrefix + " found on interface " + nicUID)
+			return ""
+		}
+
+		makeLB := func(name, vip string) *metalnetv1alpha1.LoadBalancer {
+			GinkgoHelper()
+			lb := &metalnetv1alpha1.LoadBalancer{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns.Name},
+				Spec: metalnetv1alpha1.LoadBalancerSpec{
+					NetworkRef: corev1.LocalObjectReference{Name: "test-network"},
+					LBtype:     "Public",
+					IPFamily:   corev1.IPv4Protocol,
+					IP:         metalnetv1alpha1.IP{Addr: netip.MustParseAddr(vip)},
+					Ports:      []metalnetv1alpha1.LBPort{{Protocol: "TCP", Port: 80}},
+					NodeName:   &testNode,
+				},
+			}
+			Expect(k8sClient.Create(ctx, lb)).To(Succeed())
+			Expect(lbReconcile(ctx, *lb)).To(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: name}, lb)).To(Succeed())
+			DeferCleanup(func(ctx SpecContext) {
+				Expect(k8sClient.Delete(ctx, lb)).To(Succeed())
+				Expect(lbReconcile(ctx, *lb)).To(Succeed())
+			})
+			return lb
+		}
+
+		It("removes the backend's local LB target when the LoadBalancerTarget is dropped (no orphan)", func() {
+			const vip = "11.6.6.1"
+			lb := makeLB("lbt-lb1", vip)
+
+			By("creating and reconciling a backend NetworkInterface")
+			nic := &metalnetv1alpha1.NetworkInterface{
+				ObjectMeta: metav1.ObjectMeta{Name: "lbt-nic1", Namespace: ns.Name},
+				Spec: metalnetv1alpha1.NetworkInterfaceSpec{
+					NetworkRef: corev1.LocalObjectReference{Name: "test-network"},
+					NodeName:   &testNode,
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+					IPs:        []metalnetv1alpha1.IP{{Addr: netip.MustParseAddr("10.0.0.21")}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, nic)).To(Succeed())
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "lbt-nic1"}, nic)).To(Succeed())
+			DeferCleanup(func(ctx SpecContext) {
+				Expect(k8sClient.Delete(ctx, nic)).To(Succeed())
+				Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+			})
+
+			By("adding the LB VIP as a LoadBalancerTarget on the NIC")
+			patch := nic.DeepCopy()
+			patch.Spec.LoadBalancerTargets = []metalnetv1alpha1.IPPrefix{metalnetv1alpha1.MustParseIPPrefix(vip + "/32")}
+			Expect(k8sClient.Patch(ctx, patch, client.MergeFrom(nic))).To(Succeed())
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+
+			By("verifying the backend is installed in the LB's dpservice target table")
+			underlay := lbPrefixUnderlay(string(nic.UID), vip+"/32")
+			Expect(targetIPs(string(lb.UID))).To(ContainElement(underlay))
+
+			By("dropping the LoadBalancerTarget from the NIC")
+			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "lbt-nic1"}, nic)).To(Succeed())
+			patch = nic.DeepCopy()
+			patch.Spec.LoadBalancerTargets = []metalnetv1alpha1.IPPrefix{}
+			Expect(k8sClient.Patch(ctx, patch, client.MergeFrom(nic))).To(Succeed())
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+
+			By("verifying the target was removed from the LB (no orphan left behind)")
+			Expect(targetIPs(string(lb.UID))).NotTo(ContainElement(underlay))
+		})
+
+		It("removes the backend's local LB target when the whole NetworkInterface is deleted", func() {
+			const vip = "11.6.6.2"
+			lb := makeLB("lbt-lb2", vip)
+
+			By("creating a backend NIC that is already an LB target")
+			nic := &metalnetv1alpha1.NetworkInterface{
+				ObjectMeta: metav1.ObjectMeta{Name: "lbt-nic2", Namespace: ns.Name},
+				Spec: metalnetv1alpha1.NetworkInterfaceSpec{
+					NetworkRef:          corev1.LocalObjectReference{Name: "test-network"},
+					NodeName:            &testNode,
+					IPFamilies:          []corev1.IPFamily{corev1.IPv4Protocol},
+					IPs:                 []metalnetv1alpha1.IP{{Addr: netip.MustParseAddr("10.0.0.22")}},
+					LoadBalancerTargets: []metalnetv1alpha1.IPPrefix{metalnetv1alpha1.MustParseIPPrefix(vip + "/32")},
+				},
+			}
+			Expect(k8sClient.Create(ctx, nic)).To(Succeed())
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "lbt-nic2"}, nic)).To(Succeed())
+
+			By("verifying the backend is installed in the LB's dpservice target table")
+			underlay := lbPrefixUnderlay(string(nic.UID), vip+"/32")
+			Expect(targetIPs(string(lb.UID))).To(ContainElement(underlay))
+
+			By("deleting the NetworkInterface entirely")
+			Expect(k8sClient.Delete(ctx, nic)).To(Succeed())
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+
+			By("verifying the backend's target was removed from the LB")
+			Expect(targetIPs(string(lb.UID))).NotTo(ContainElement(underlay))
+		})
+	})
+
 })
 
 var _ = Describe("Negative cases", Label("negative"), func() {
@@ -2139,6 +2271,7 @@ func ifaceReconcile(ctx context.Context, networkInterface metalnetv1alpha1.Netwo
 		EventRecorder:     events.NewFakeRecorder(10),
 		DPDK:              dpdkClient,
 		RouteUtil:         metalbondRouteUtil,
+		MetalnetCache:     metalnetCache,
 		NodeName:          testNode,
 		NetFnsManager:     netFnsManager,
 		PublicVNI:         int(defaultRouterAddr.PublicVNI),
@@ -2199,3 +2332,214 @@ func lbReconcile(ctx context.Context, loadBalancer metalnetv1alpha1.LoadBalancer
 	}
 	return nil
 }
+
+// Regression coverage for the LB-cache prime: after a metalnet restart (empty
+// MetalnetCache) PrimeLoadBalancerCache must rebuild (vni, vip) -> lb.UID for
+// every LB assigned to this node before the NIC controller's first reconcile.
+// Without this, a NIC cleanup that arrives before the LB controller's first
+// reconcile would silently skip DeleteLoadBalancerTarget and leak an orphan.
+var _ = Describe("LoadBalancer cache prime", Label("lb", "lbtarget", "prime"), func() {
+	ctx := SetupContext()
+	ns := SetupTest(ctx)
+
+	BeforeEach(func() {
+		network = &metalnetv1alpha1.Network{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-network", Namespace: ns.Name},
+			Spec:       metalnetv1alpha1.NetworkSpec{ID: 123},
+		}
+		Expect(k8sClient.Create(ctx, network)).To(Succeed())
+		Expect(networkReconcile(ctx, *network)).To(Succeed())
+
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(k8sClient.Delete(ctx, network)).To(Succeed())
+			Expect(networkReconcile(ctx, *network)).To(Succeed())
+		})
+	})
+
+	newLB := func(name, vip string) *metalnetv1alpha1.LoadBalancer {
+		return &metalnetv1alpha1.LoadBalancer{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns.Name},
+			Spec: metalnetv1alpha1.LoadBalancerSpec{
+				NetworkRef: corev1.LocalObjectReference{Name: "test-network"},
+				LBtype:     "Public",
+				IPFamily:   corev1.IPv4Protocol,
+				IP:         metalnetv1alpha1.IP{Addr: netip.MustParseAddr(vip)},
+				Ports:      []metalnetv1alpha1.LBPort{{Protocol: "TCP", Port: 80}},
+				NodeName:   &testNode,
+			},
+		}
+	}
+
+	freshCache := func() *internal.MetalnetCache {
+		l := ctrl.Log.WithName("prime-test")
+		return internal.NewMetalnetCache(&l)
+	}
+
+	primer := func(c *internal.MetalnetCache) *LoadBalancerReconciler {
+		return &LoadBalancerReconciler{
+			Client:        k8sClient,
+			DPDK:          dpdkClient,
+			MetalnetCache: c,
+			NodeName:      testNode,
+		}
+	}
+
+	It("populates the cache from LoadBalancers assigned to this node", func() {
+		lb := newLB("prime-lb-local", "11.7.7.1")
+		Expect(k8sClient.Create(ctx, lb)).To(Succeed())
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: lb.Name}, lb)).To(Succeed())
+		DeferCleanup(func(ctx SpecContext) { Expect(k8sClient.Delete(ctx, lb)).To(Succeed()) })
+
+		c := freshCache()
+		Expect(primer(c).PrimeLoadBalancerCache(ctx, k8sClient)).To(Succeed())
+
+		uid, ok := c.GetLoadBalancerServer(123, "11.7.7.1")
+		Expect(ok).To(BeTrue(), "cache must contain the LB after priming")
+		Expect(uid).To(Equal(lb.UID))
+	})
+
+	It("ignores LoadBalancers assigned to other nodes", func() {
+		otherNode := "some-other-host"
+		lb := newLB("prime-lb-remote", "11.7.7.2")
+		lb.Spec.NodeName = &otherNode
+		Expect(k8sClient.Create(ctx, lb)).To(Succeed())
+		DeferCleanup(func(ctx SpecContext) { Expect(k8sClient.Delete(ctx, lb)).To(Succeed()) })
+
+		c := freshCache()
+		Expect(primer(c).PrimeLoadBalancerCache(ctx, k8sClient)).To(Succeed())
+
+		_, ok := c.GetLoadBalancerServer(123, "11.7.7.2")
+		Expect(ok).To(BeFalse(), "LB on another node must not populate this node's cache")
+	})
+
+	It("falls back to dpservice when the parent Network is missing", func() {
+		// Scenario: dpservice still holds the LB (and, in production, its
+		// backend targets) but the k8s Network CR has been deleted or hasn't
+		// yet appeared. The primer must still resolve VNI via dpservice so a
+		// subsequent NIC-delete can find the local LB target and remove it.
+		const vip = "11.7.7.4"
+		lb := newLB("prime-lb-dpfallback", vip)
+		Expect(k8sClient.Create(ctx, lb)).To(Succeed())
+		Expect(lbReconcile(ctx, *lb)).To(Succeed())
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: lb.Name}, lb)).To(Succeed())
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, lb))).To(Succeed())
+			_, _ = dpdkClient.DeleteLoadBalancer(ctx, string(lb.UID), dpdkerrors.Ignore(dpdkerrors.NOT_FOUND))
+		})
+
+		// Simulate "parent Network gone, dpservice state retained": repoint
+		// the k8s LB at a nonexistent Network. dpservice still holds the LB
+		// under the original VNI (123, from `test-network`).
+		patch := lb.DeepCopy()
+		patch.Spec.NetworkRef = corev1.LocalObjectReference{Name: "does-not-exist"}
+		Expect(k8sClient.Patch(ctx, patch, client.MergeFrom(lb))).To(Succeed())
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: lb.Name}, lb)).To(Succeed())
+
+		c := freshCache()
+		Expect(primer(c).PrimeLoadBalancerCache(ctx, k8sClient)).To(Succeed())
+
+		uid, ok := c.GetLoadBalancerServer(123, vip)
+		Expect(ok).To(BeTrue(), "cache must be populated from dpservice fallback when Network is missing")
+		Expect(uid).To(Equal(lb.UID))
+	})
+
+	It("skips LoadBalancers whose parent Network and dpservice record are both missing", func() {
+		// Nothing in dpservice, nothing in k8s under the referenced Network name.
+		// No orphan target can exist, so skipping is safe and must not error.
+		lb := newLB("prime-lb-nonet", "11.7.7.3")
+		lb.Spec.NetworkRef = corev1.LocalObjectReference{Name: "does-not-exist"}
+		Expect(k8sClient.Create(ctx, lb)).To(Succeed())
+		DeferCleanup(func(ctx SpecContext) { Expect(k8sClient.Delete(ctx, lb)).To(Succeed()) })
+
+		c := freshCache()
+		Expect(primer(c).PrimeLoadBalancerCache(ctx, k8sClient)).To(Succeed())
+
+		_, ok := c.GetLoadBalancerServer(123, "11.7.7.3")
+		Expect(ok).To(BeFalse())
+	})
+
+	// Full restart-ordering regression: dpservice state is retained across a
+	// metalnet restart, the parent k8s Network is missing, the fresh cache is
+	// primed, and the NIC is then deleted BEFORE the LB reconciler has a
+	// chance to repopulate its cache entry. Without the dpservice fallback in
+	// PrimeLoadBalancerCache, GetLoadBalancerServer would miss and the
+	// backend's LB target would be left orphaned in dpservice when its
+	// lbprefix is removed.
+	It("cleans up the local LB target on NIC-delete after a restart with Network missing", func() {
+		const vip = "11.7.7.5"
+
+		By("creating + reconciling an LB so dpservice holds it (simulates retained state across restart)")
+		lb := newLB("prime-lb-ordering", vip)
+		Expect(k8sClient.Create(ctx, lb)).To(Succeed())
+		Expect(lbReconcile(ctx, *lb)).To(Succeed())
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: lb.Name}, lb)).To(Succeed())
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, lb))).To(Succeed())
+			_, _ = dpdkClient.DeleteLoadBalancer(ctx, string(lb.UID), dpdkerrors.Ignore(dpdkerrors.NOT_FOUND))
+		})
+
+		By("creating + reconciling the backend NIC so dpservice holds the lbprefix and local LB target")
+		nic := &metalnetv1alpha1.NetworkInterface{
+			ObjectMeta: metav1.ObjectMeta{Name: "prime-nic-ordering", Namespace: ns.Name},
+			Spec: metalnetv1alpha1.NetworkInterfaceSpec{
+				NetworkRef:          corev1.LocalObjectReference{Name: "test-network"},
+				NodeName:            &testNode,
+				IPFamilies:          []corev1.IPFamily{corev1.IPv4Protocol},
+				IPs:                 []metalnetv1alpha1.IP{{Addr: netip.MustParseAddr("10.0.0.41")}},
+				LoadBalancerTargets: []metalnetv1alpha1.IPPrefix{metalnetv1alpha1.MustParseIPPrefix(vip + "/32")},
+			},
+		}
+		Expect(k8sClient.Create(ctx, nic)).To(Succeed())
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, nic))).To(Succeed())
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+		})
+		Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: nic.Name}, nic)).To(Succeed())
+
+		pl, err := dpdkClient.ListLoadBalancerPrefixes(ctx, string(nic.UID))
+		Expect(err).NotTo(HaveOccurred())
+		var underlay string
+		for _, p := range pl.Items {
+			if p.Spec.Prefix.String() == vip+"/32" {
+				underlay = p.Spec.UnderlayRoute.String()
+			}
+		}
+		Expect(underlay).NotTo(BeEmpty())
+		assertTargetIPs := func(matcher gomegatypes.GomegaMatcher) {
+			GinkgoHelper()
+			tl, err := dpdkClient.ListLoadBalancerTargets(ctx, string(lb.UID))
+			Expect(err).NotTo(HaveOccurred())
+			ips := make([]string, 0, len(tl.Items))
+			for _, t := range tl.Items {
+				ips = append(ips, t.Spec.TargetIP.String())
+			}
+			Expect(ips).To(matcher)
+		}
+		assertTargetIPs(ContainElement(underlay))
+
+		By("simulating 'k8s Network has been deleted but dpservice state survives' — repoint LB NetworkRef at a missing Network, and wipe the cache")
+		lbPatch := lb.DeepCopy()
+		lbPatch.Spec.NetworkRef = corev1.LocalObjectReference{Name: "does-not-exist"}
+		Expect(k8sClient.Patch(ctx, lbPatch, client.MergeFrom(lb))).To(Succeed())
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: lb.Name}, lb)).To(Succeed())
+
+		freshC := freshCache()
+		origCache := metalnetCache
+		metalnetCache = freshC
+		DeferCleanup(func() { metalnetCache = origCache })
+
+		By("priming: Network is missing, so the dpservice fallback is the only way to get this LB into the cache")
+		Expect(primer(freshC).PrimeLoadBalancerCache(ctx, k8sClient)).To(Succeed())
+		uid, ok := freshC.GetLoadBalancerServer(123, vip)
+		Expect(ok).To(BeTrue(), "cache must be populated by dpservice fallback before NIC-delete")
+		Expect(uid).To(Equal(lb.UID))
+
+		By("deleting the NIC — cleanup must remove the local LB target, not orphan it")
+		Expect(k8sClient.Delete(ctx, nic)).To(Succeed())
+		Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+
+		By("verifying the backend's local LB target is gone from dpservice")
+		assertTargetIPs(Not(ContainElement(underlay)))
+	})
+})
