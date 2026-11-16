@@ -135,6 +135,9 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 		return ctrl.Result{}, err
 	}
 
+	enableEncryption := network.Spec.EnableEncryption
+	log.V(1).Info("Got encryption-status", "Enable-Encryption", enableEncryption, "VNI", vni)
+
 	if !vniAvail.Spec.InUse {
 		if !r.MetalnetCache.IsVniPeered(vni) {
 			log.V(1).Info("VNI doesn't exist in dp-service and no peering, unsubscribe from it")
@@ -145,7 +148,7 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 		}
 
 		log.V(1).Info("Reconciling peered VNIs")
-		if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail.Spec.InUse); err != nil {
+		if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail.Spec.InUse, enableEncryption); err != nil {
 			return ctrl.Result{}, err
 		}
 		log.V(1).Info("Reconciled peered VNIs")
@@ -160,13 +163,13 @@ func (r *NetworkReconciler) reconcile(ctx context.Context, log logr.Logger, netw
 	log.V(1).Info("Created dpdk default route if not existed")
 
 	log.V(1).Info("Reconciling peered VNIs")
-	if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail.Spec.InUse); err != nil {
+	if err := r.reconcilePeeredVNIs(ctx, log, network, vni, vniAvail.Spec.InUse, enableEncryption); err != nil {
 		return ctrl.Result{}, err
 	}
 	log.V(1).Info("Reconciled peered VNIs")
 
 	log.V(1).Info("Subscribing to metalbond if not subscribed")
-	if err := r.subscribeIfNotSubscribed(ctx, vni); err != nil {
+	if err := r.subscribeIfNotSubscribed(ctx, vni, enableEncryption); err != nil {
 		return ctrl.Result{}, err
 	}
 	log.V(1).Info("Subscribed to metalbond if not subscribed")
@@ -246,8 +249,8 @@ func (r *NetworkReconciler) deleteDefaultRouteIfExists(ctx context.Context, vni 
 	return nil
 }
 
-func (r *NetworkReconciler) subscribeIfNotSubscribed(ctx context.Context, vni uint32) error {
-	if err := r.RouteUtil.Subscribe(ctx, metalbond.VNI(vni)); metalbond.IgnoreAlreadySubscribedToVNIError(err) != nil {
+func (r *NetworkReconciler) subscribeIfNotSubscribed(ctx context.Context, vni uint32, enableEncryption bool) error {
+	if err := r.RouteUtil.Subscribe(ctx, metalbond.VNI(vni), enableEncryption); metalbond.IgnoreAlreadySubscribedToVNIError(err) != nil {
 		return fmt.Errorf("error subscribing to vni: %w", err)
 	}
 	return nil
@@ -263,7 +266,7 @@ func (r *NetworkReconciler) setDifference(s1, s2 sets.Set[uint32]) sets.Set[uint
 	return diff
 }
 
-func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32, ownVniAvail bool) error {
+func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Logger, network *metalnetv1alpha1.Network, vni uint32, ownVniAvail, enableEncryption bool) error {
 	log.V(1).Info("reconcilePeeredVNIs", "vni", vni, "ownVniAvail", ownVniAvail)
 
 	// the ok flag is ignored because the existence of the VNI is already checked before this function is called
@@ -376,7 +379,7 @@ func (r *NetworkReconciler) reconcilePeeredVNIs(ctx context.Context, log logr.Lo
 				continue
 			}
 			if ownVniAvail && !peeredVniAvail.Spec.InUse {
-				if err := r.subscribeIfNotSubscribed(ctx, peeredVNI); err != nil {
+				if err := r.subscribeIfNotSubscribed(ctx, peeredVNI, enableEncryption); err != nil {
 					networkPeeringState[peeredVNI] = metalnetv1alpha1.NetworkPeeringStateError
 					errs = append(errs, err)
 					continue

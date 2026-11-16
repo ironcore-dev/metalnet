@@ -388,7 +388,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = metalbondRouteUtil.Subscribe(ctx, metalbond.VNI(publicVNI))
+	// public VNI is unencrypted at the moment, so hard set to false
+	err = metalbondRouteUtil.Subscribe(ctx, metalbond.VNI(publicVNI), false)
 	if err != nil {
 		setupLog.Error(err, "unable to subscribe to metalbond's public VNI")
 		os.Exit(1)
