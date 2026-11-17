@@ -1509,6 +1509,99 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 		})
 	})
 
+	// Regression for the "update" (default) branch of reconcileLBTargets: if a
+	// prior reconcile created the dpservice lbprefix but left the local
+	// LoadBalancerTarget missing (e.g. CreateLoadBalancerPrefix succeeded,
+	// CreateLoadBalancerTarget then failed), the next reconcile finds the
+	// prefix in both dpdkPrefixes and specPrefixes and lands in the default
+	// branch. That branch must idempotently install the missing target, not
+	// just ensure the metalbond route.
+	Context("LoadBalancer target recovery", Label("lb", "lbtarget", "recovery"), func() {
+		targetIPs := func(lbUID string) []string {
+			GinkgoHelper()
+			tl, err := dpdkClient.ListLoadBalancerTargets(ctx, lbUID)
+			Expect(err).NotTo(HaveOccurred())
+			ips := []string{}
+			for _, t := range tl.Items {
+				ips = append(ips, t.Spec.TargetIP.String())
+			}
+			return ips
+		}
+
+		lbPrefixUnderlay := func(nicUID, vipPrefix string) netip.Addr {
+			GinkgoHelper()
+			pl, err := dpdkClient.ListLoadBalancerPrefixes(ctx, nicUID)
+			Expect(err).NotTo(HaveOccurred())
+			for _, p := range pl.Items {
+				if p.Spec.Prefix.String() == vipPrefix {
+					return *p.Spec.UnderlayRoute
+				}
+			}
+			Fail("no lb prefix " + vipPrefix + " found on interface " + nicUID)
+			return netip.Addr{}
+		}
+
+		It("installs a missing local target on the next reconcile when the lbprefix is already present", func() {
+			const vip = "11.8.8.1"
+
+			By("creating an LB and reconciling it")
+			lb := &metalnetv1alpha1.LoadBalancer{
+				ObjectMeta: metav1.ObjectMeta{Name: "rec-lb", Namespace: ns.Name},
+				Spec: metalnetv1alpha1.LoadBalancerSpec{
+					NetworkRef: corev1.LocalObjectReference{Name: "test-network"},
+					LBtype:     "Public",
+					IPFamily:   corev1.IPv4Protocol,
+					IP:         metalnetv1alpha1.IP{Addr: netip.MustParseAddr(vip)},
+					Ports:      []metalnetv1alpha1.LBPort{{Protocol: "TCP", Port: 80}},
+					NodeName:   &testNode,
+				},
+			}
+			Expect(k8sClient.Create(ctx, lb)).To(Succeed())
+			Expect(lbReconcile(ctx, *lb)).To(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "rec-lb"}, lb)).To(Succeed())
+			DeferCleanup(func(ctx SpecContext) {
+				Expect(k8sClient.Delete(ctx, lb)).To(Succeed())
+				Expect(lbReconcile(ctx, *lb)).To(Succeed())
+			})
+
+			By("creating a backend NIC that is already an LB target (first reconcile creates prefix + target)")
+			nic := &metalnetv1alpha1.NetworkInterface{
+				ObjectMeta: metav1.ObjectMeta{Name: "rec-nic", Namespace: ns.Name},
+				Spec: metalnetv1alpha1.NetworkInterfaceSpec{
+					NetworkRef:          corev1.LocalObjectReference{Name: "test-network"},
+					NodeName:            &testNode,
+					IPFamilies:          []corev1.IPFamily{corev1.IPv4Protocol},
+					IPs:                 []metalnetv1alpha1.IP{{Addr: netip.MustParseAddr("10.0.0.31")}},
+					LoadBalancerTargets: []metalnetv1alpha1.IPPrefix{metalnetv1alpha1.MustParseIPPrefix(vip + "/32")},
+				},
+			}
+			Expect(k8sClient.Create(ctx, nic)).To(Succeed())
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "rec-nic"}, nic)).To(Succeed())
+			DeferCleanup(func(ctx SpecContext) {
+				Expect(k8sClient.Delete(ctx, nic)).To(Succeed())
+				Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+			})
+
+			underlay := lbPrefixUnderlay(string(nic.UID), vip+"/32")
+			Expect(targetIPs(string(lb.UID))).To(ContainElement(underlay.String()))
+
+			By("simulating the failure mode: lbprefix present, local lb target missing")
+			// Delete only the local target, leaving the lbprefix in place. This
+			// mirrors what the state would be if a prior reconcile created the
+			// prefix and then CreateLoadBalancerTarget had failed before retry.
+			_, err := dpdkClient.DeleteLoadBalancerTarget(ctx, string(lb.UID), &underlay)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(targetIPs(string(lb.UID))).NotTo(ContainElement(underlay.String()))
+
+			By("reconciling again — the default branch must reinstall the local target")
+			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+
+			By("verifying the local target was restored")
+			Expect(targetIPs(string(lb.UID))).To(ContainElement(underlay.String()))
+		})
+	})
+
 })
 
 var _ = Describe("Negative cases", Label("negative"), func() {

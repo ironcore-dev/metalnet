@@ -1142,6 +1142,24 @@ func (r *NetworkInterfaceReconciler) reconcileLBTargets(ctx context.Context, log
 				if err != nil {
 					return err
 				}
+
+				// The lbprefix already exists in dpservice, but the local lb
+				// target may not. The create branch above can leave this state
+				// behind if CreateLoadBalancerPrefix succeeds and the following
+				// CreateLoadBalancerTarget fails — the next reconcile sees the
+				// prefix on both sides and lands here, so this branch must
+				// idempotently ensure the target too. ALREADY_EXISTS is the
+				// normal steady-state outcome.
+				if uid, ok := r.MetalnetCache.GetLoadBalancerServer(vni, prefix.Addr().String()); ok {
+					if _, err := r.DPDK.CreateLoadBalancerTarget(ctx, &dpdk.LoadBalancerTarget{
+						LoadBalancerTargetMeta: dpdk.LoadBalancerTargetMeta{LoadbalancerID: string(uid)},
+						Spec:                   dpdk.LoadBalancerTargetSpec{TargetIP: &underlayRoute},
+					}, dpdkerrors.Ignore(dpdkerrors.ALREADY_EXISTS)); err != nil {
+						return err
+					}
+				}
+				log.V(1).Info("Ensured local dpdk lb target exists")
+
 				log.V(1).Info("Ensuring metalbond lb target route exists")
 
 				dest := metalbond.Destination{
