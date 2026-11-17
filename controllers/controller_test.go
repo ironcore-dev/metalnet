@@ -1452,7 +1452,7 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
 			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "lbt-nic1"}, nic)).To(Succeed())
 			DeferCleanup(func(ctx SpecContext) {
-				Expect(k8sClient.Delete(ctx, nic)).To(Succeed())
+				Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, nic))).To(Succeed())
 				Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
 			})
 
@@ -1493,6 +1493,10 @@ var _ = Describe("Network Interface and LoadBalancer Controller", func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, nic)).To(Succeed())
+			DeferCleanup(func(ctx SpecContext) {
+				Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, nic))).To(Succeed())
+				Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
+			})
 			Expect(ifaceReconcile(ctx, *nic)).To(Succeed())
 			Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "lbt-nic2"}, nic)).To(Succeed())
 
