@@ -438,6 +438,7 @@ func main() {
 		Scheme:                      mgr.GetScheme(),
 		DPDK:                        dpdkclient.NewClient(dpdkProtoClient),
 		RouteUtil:                   metalbondRouteUtil,
+		MetalnetCache:               metalnetCache,
 		NetFnsManager:               netFnsManager,
 		PfToVfOffset:                pfToVfOffset,
 		SysFS:                       sysFS,
@@ -453,7 +454,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.LoadBalancerReconciler{
+	lbReconciler := &controllers.LoadBalancerReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		EventRecorder:     mgr.GetEventRecorder("loadbalancer"),
@@ -463,11 +464,23 @@ func main() {
 		NodeName:          nodeName,
 		PublicVNI:         publicVNI,
 		EnableIPv6Support: enableIPv6Support,
-	}).SetupWithManager(mgr, mgr.GetCache()); err != nil {
+	}
+	if err = lbReconciler.SetupWithManager(mgr, mgr.GetCache()); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LoadBalancer")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
+
+	// Prime the LB cache from k8s BEFORE the manager starts: lbServerMap backs
+	// the NIC cleanup paths' lookup of (vni, vip) -> lb.UID. Without priming,
+	// a NIC cleanup that arrives before its parent LB's first reconcile would
+	// silently skip DeleteLoadBalancerTarget and leak an orphan backend in
+	// dpservice. Use the API reader because the manager's cache is not started
+	// yet; List against the cached client would block or fail.
+	if err := lbReconciler.PrimeLoadBalancerCache(context.Background(), mgr.GetAPIReader()); err != nil {
+		setupLog.Error(err, "unable to prime LB cache")
+		os.Exit(1)
+	}
 
 	var dpChecker healthz.Checker = func(_ *http.Request) error {
 		uuid, err := dpdkProtoClient.CheckInitialized(context.Background(), &dpdkproto.CheckInitializedRequest{})

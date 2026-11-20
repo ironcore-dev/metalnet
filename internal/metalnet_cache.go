@@ -16,6 +16,7 @@ type MetalnetCache struct {
 	lbServerMap    map[uint32]map[string]types.UID
 	peeredPrefixes map[uint32]map[uint32][]netip.Prefix
 	peeredVnis     map[uint32]sets.Set[uint32]
+	mu             sync.RWMutex
 	mtxPeeredVnis  sync.RWMutex
 	log            *logr.Logger
 }
@@ -30,10 +31,14 @@ func NewMetalnetCache(log *logr.Logger) *MetalnetCache {
 }
 
 func (c *MetalnetCache) SetPeeredPrefixes(vni uint32, peeredPrefixes map[uint32][]netip.Prefix) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.peeredPrefixes[vni] = peeredPrefixes
 }
 
 func (c *MetalnetCache) GetPeeredPrefixes(vni uint32) (map[uint32][]netip.Prefix, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	prefixes, ok := c.peeredPrefixes[vni]
 	if !ok {
 		return nil, false
@@ -97,6 +102,8 @@ func (c *MetalnetCache) RemoveVniFromPeerVnis(vni, peeredVNI uint32) error {
 }
 
 func (c *MetalnetCache) AddLoadBalancerServer(vni uint32, ip string, uid types.UID) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if _, exists := c.lbServerMap[vni]; !exists {
 		c.lbServerMap[vni] = make(map[string]types.UID)
 	}
@@ -105,6 +112,8 @@ func (c *MetalnetCache) AddLoadBalancerServer(vni uint32, ip string, uid types.U
 }
 
 func (c *MetalnetCache) RemoveLoadBalancerServer(ip string, uid types.UID) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	for _, innerMap := range c.lbServerMap {
 		for keyIp, value := range innerMap {
 			if ip == keyIp && value == uid {
@@ -116,6 +125,8 @@ func (c *MetalnetCache) RemoveLoadBalancerServer(ip string, uid types.UID) error
 }
 
 func (c *MetalnetCache) GetLoadBalancerServer(vni uint32, ip string) (types.UID, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	innerMap, exists := c.lbServerMap[vni]
 	if !exists {
 		return "", false
