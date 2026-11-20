@@ -10,7 +10,7 @@ on:
 jobs:
   checks:
     name: run
-    runs-on: [ self-hosted, dpdk ]
+    runs-on: [ dpdk ]
     steps:
       - name: Pre-run cleanup
         if: always()
