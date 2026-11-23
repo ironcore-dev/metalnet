@@ -26,6 +26,7 @@ COPY encoding/ encoding/
 COPY metalbond/ metalbond/
 COPY netfns/ netfns/
 COPY sysfs/ sysfs/
+COPY key_exchange_client/ key_exchange_client/
 # Needed for version extraction by go build
 COPY .git/ .git/
 
